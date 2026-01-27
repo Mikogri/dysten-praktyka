@@ -39,6 +39,12 @@ namespace DystenSoftwateManagment.Managers
 			return await db.ProtocolsRS.FirstOrDefaultAsync(p => p.Id == id);
 		}
 
+		public async Task<ProtocolRS?> GetWithFileDataAsync(int? id)
+		{
+			await using var db = await _dbFactory.CreateDbContextAsync();
+			return await db.ProtocolsRS.Include(f => f.FileData).FirstOrDefaultAsync(p => p.Id == id);
+		}
+
 		public async Task<ProtocolRS?> GetSoftwareProtocolAsync(int? softwareId)
 		{
 			await using var db = await _dbFactory.CreateDbContextAsync();
@@ -206,40 +212,6 @@ namespace DystenSoftwateManagment.Managers
 			catch
 			{
 				return (OperationResult.Error, "Nie udało się usunąć protokołu");
-			}
-		}
-
-		public async Task<ProtocolRS?> GetWithFileDataAsync(int? id)
-		{
-			await using var db = await _dbFactory.CreateDbContextAsync();
-			return await db.ProtocolsRS.Include(f => f.FileData).FirstOrDefaultAsync(p => p.Id == id);
-		}
-
-		public async Task<(OperationResult OperationStatus, string Message, byte[]? FileData, string? FileName)> GetFileAsync(ProtocolRS protocolRS)
-		{
-			try
-			{
-				await using var db = await _dbFactory.CreateDbContextAsync();
-
-				var protocol = await db.ProtocolsRS
-					.Include(p => p.FileData)
-					.FirstOrDefaultAsync(p => p.Id == protocolRS.Id);
-
-				if (protocol is null)
-				{
-					return (OperationResult.Error, "Nie znaleziono protokołu w bazie", null, null);
-				}
-
-				if (protocol.FileData?.Data is null || protocol.FileData.Data.Length == 0)
-				{
-					return (OperationResult.Error, "Ten protokół nie ma przypisanego pliku", null, null);
-				}
-
-				return (OperationResult.Success, "Plik pobrany pomyślnie", protocol.FileData.Data, protocol.FileName);
-			}
-			catch
-			{
-				return (OperationResult.Error, "Nie udało się pobrać pliku", null, null);
 			}
 		}
 

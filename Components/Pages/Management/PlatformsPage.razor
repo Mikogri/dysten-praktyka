@@ -16,7 +16,6 @@
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
-@inject Blazored.LocalStorage.ILocalStorageService localStorage
 
 <PageTitle>Platformy</PageTitle>
 
@@ -74,44 +73,6 @@
 
     private ListView<Platform>? listView;
 
-    // private List<Platform> platforms = new();
-    // private int totalDevices = 0;
-
-    // private string searchText = string.Empty;
-    // private bool isLoading = true;
-    // private bool isUpdating = false;
-    // private bool isGridView = true;
-
-    // private List<Platform> filteredList => platforms.Where(d => SearchFunc(d)).ToList();
-
-    // protected override async Task OnAfterRenderAsync(bool firstRender)
-    // {
-    //     if (firstRender)
-    //     {
-    //         isGridView = await localStorage.GetItemAsync<bool>("isGridView");
-    //         await Load();
-    //         isLoading = false;
-    //         StateHasChanged();
-    //     }
-    // }
-
-    // private bool SearchFunc(Platform platform)
-    // {
-    //     return platform.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase);
-    // }
-
-    // private async Task Load()
-    // {
-    //     isUpdating = true;
-    //     StateHasChanged();
-
-    //     totalDevices = await PlatformsManager.CountAllAsync();
-    //     platforms = await PlatformsManager.GetAllAsync();
-
-    //     isUpdating = false;
-    //     StateHasChanged();
-    // }
-
     public async Task Create()
     {
         var result = await PlatformsManager.AddAsync();
@@ -154,10 +115,4 @@
             Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
         }
     }
-
-    // public void SwitchView(bool isGrid)
-    // {
-    //     isGridView = isGrid;
-    //     localStorage.SetItemAsync("isGridView", isGridView);
-    // }
 }

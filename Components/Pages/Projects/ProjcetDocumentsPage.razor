@@ -10,11 +10,8 @@
 @using DystenSoftwateManagment.Components.Controls
 @using MudBlazor
 @rendermode InteractiveServer
-@inject IDbContextFactory<AppDbContext> DbFactory
-@inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 @inject ProjectDocumentsManager ProjectDocumentsManager
-@inject IJSRuntime JS
 
 <ListView @ref="listView" 
           TItem="ProjectDocument"

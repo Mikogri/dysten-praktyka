@@ -79,43 +79,6 @@
 @code {
 
     private ListView<Project>? listView;
-    // private List<Project> projects = new();
-    // private int totalProjects = 0;
-
-    // private string searchText = string.Empty;
-    // private bool isLoading = true;
-    // private bool isUpdating = false;
-    // private bool isGridView = true;
-
-    // private List<Project> filteredList => projects.Where(d => SearchFunc(d)).ToList();
-
-    // protected override async Task OnAfterRenderAsync(bool firstRender)
-    // {
-    //     if (firstRender)
-    //     {
-    //         isGridView = await localStorage.GetItemAsync<bool>("isGridView");
-    //         await Load();
-    //         isLoading = false;
-    //         StateHasChanged();
-    //     }
-    // }
-
-    // private bool SearchFunc(Project project)
-    // {
-    //     return project.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase);
-    // }
-
-    // private async Task Load()
-    // {
-    //     isUpdating = true;
-    //     StateHasChanged();
-
-    //     totalProjects = await ProjectsManager.CountAllAsync();
-    //     projects = await ProjectsManager.GetAllAsync();
-
-    //     isUpdating = false;
-    //     StateHasChanged();
-    // }
 
     public async Task Create()
     {
@@ -164,10 +127,4 @@
     {
         Navigation.NavigateTo($"/projects/{item.Id}", true);
     }
-
-    // public void SwitchView(bool isGrid)
-    // {
-    //     isGridView = isGrid;
-    //     localStorage.SetItemAsync("isGridView", isGridView);
-    // }
 }

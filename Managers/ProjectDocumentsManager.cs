@@ -59,6 +59,12 @@ namespace DystenSoftwateManagment.Managers
 			return await db.ProjectDocuments.FirstOrDefaultAsync(p => p.Id == id);
 		}
 
+		public async Task<ProjectDocument?> GetWithFileDataAsync(int? id)
+		{
+			await using var db = await _dbFactory.CreateDbContextAsync();
+			return await db.ProjectDocuments.Include(f => f.FileData).FirstOrDefaultAsync(p => p.Id == id);
+		}
+
 		public async Task<int> CountAllAsync()
 		{
 			await using var db = await _dbFactory.CreateDbContextAsync();
@@ -204,40 +210,6 @@ namespace DystenSoftwateManagment.Managers
 			{
 				return (OperationResult.Error, "Nie udało się usunąć dokumentu");
 			}
-		}
-
-		public async Task<(OperationResult OperationStatus, string Message, byte[]? FileData, string? FileName)> GetFileAsync(ProjectDocument projectDoucment)
-		{
-			try
-			{
-				await using var db = await _dbFactory.CreateDbContextAsync();
-
-				var document = await db.ProjectDocuments
-					.Include(p => p.FileData)
-					.FirstOrDefaultAsync(p => p.Id == projectDoucment.Id);
-
-				if (document is null)
-				{
-					return (OperationResult.Error, "Nie znaleziono dokumentu", null, null);
-				}
-
-				if (document.FileData is null || document.FileData.Data.Length == 0)
-				{
-					return (OperationResult.Error, "Ten dokument nie ma przypisanego pliku", null, null);
-				}
-
-				return (OperationResult.Success, "Plik pobrany pomyślnie", document.FileData.Data, document.FileName);
-			}
-			catch
-			{
-				return (OperationResult.Error, "Nie udało się pobrać pliku", null, null);
-			}
-		}
-
-		public async Task<ProjectDocument?> GetWithFileDataAsync(int? id)
-		{
-			await using var db = await _dbFactory.CreateDbContextAsync();
-			return await db.ProjectDocuments.Include(f => f.FileData).FirstOrDefaultAsync(p => p.Id == id);
 		}
 
 		private async Task<string> FormValidation(ProjectDocument model)

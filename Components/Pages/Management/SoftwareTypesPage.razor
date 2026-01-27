@@ -11,13 +11,8 @@
 @using MudBlazor
 @using Microsoft.AspNetCore.Authorization
 @rendermode InteractiveServer
-@inject IDbContextFactory<AppDbContext> DbFactory
-@inject NavigationManager Navigation
 @inject SoftwareTypesManager SoftwareTypesManager
-@inject IDialogService DialogService
 @inject ISnackbar Snackbar
-@inject IJSRuntime JS
-@inject Blazored.LocalStorage.ILocalStorageService localStorage
 
 <PageTitle>Typy oprogramowania</PageTitle>
 
@@ -75,46 +70,6 @@
 
     private ListView<SoftwareType>? listView;
 
-    // private List<SoftwareType> softwareTypes = [];
-
-    // private int totalSoftwares = 0;
-
-    // private string searchText = string.Empty;
-    // private bool isLoading = true;
-    // private bool isUpdating = false;
-    // private bool isGridView = true;
-
-    // private List<SoftwareType> filteredList => softwareTypes.Where(d => SearchFunc(d)).ToList();
-
-    // protected override async Task OnAfterRenderAsync(bool firstRender)
-    // {
-    //     if (firstRender)
-    //     {
-    //         isGridView = await localStorage.GetItemAsync<bool>("isGridView");
-    //         await Load();
-    //         isLoading = false;
-    //         StateHasChanged();
-    //     }
-    // }
-
-    // private async Task Load()
-    // {
-    //     isUpdating = true;
-    //     StateHasChanged();
-
-    //     await using var context = DbFactory.CreateDbContext();
-    //     totalSoftwares = await context.DevicesSoftwares.CountAsync();
-    //     softwareTypes = await SoftwareTypesManager.GetAllAsync();
-
-    //     isUpdating = false;
-    //     StateHasChanged();
-    // }
-
-    // private bool SearchFunc(SoftwareType softwareType)
-    // {
-    //     return softwareType.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase);
-    // }
-
     public async Task Create()
     {
         var result = await SoftwareTypesManager.AddAsync();
@@ -157,10 +112,4 @@
             Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
         }
     }
-
-    // public void SwitchView(bool isGrid)
-    // {
-    //     isGridView = isGrid;
-    //     localStorage.SetItemAsync("isGridView", isGridView);
-    // }
 }
