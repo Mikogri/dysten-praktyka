@@ -1,0 +1,31 @@
+﻿@page "/"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject NavigationManager Navigation
+
+<PageTitle>Strona Główna</PageTitle>
+
+<div class="empty-list">
+    <img src="/Assets/noidea.png" width="40" height="40" />
+    <div class="empty-list-text">
+        <p>Ta strona jest pusta</p>
+        <p></p>
+        <button class="button-background-light" @onclick="NavigateProjects">
+            Przejdź do projektów
+        </button>
+    </div>
+</div>
+
+@code {
+
+    private void NavigateProjects()
+    {
+        Navigation.NavigateTo($"/projects", true);
+    }
+
+    protected override void OnInitialized()
+    {
+        Navigation.NavigateTo("/projects", true);
+    }
+
+}

@@ -1,0 +1,37 @@
+﻿@using DystenSoftwateManagment.Components.Controls
+@using Microsoft.AspNetCore.Components
+@using DystenSoftwateManagment.Components.Layout
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.AspNetCore.Components.Web
+@using System.Security.Claims
+
+<Router AppAssembly="@typeof(App).Assembly">
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+            <NotAuthorized>
+                @if (!context.User.Identity?.IsAuthenticated ?? true)
+                {
+                    <RedirectToLogin />
+                }
+                else
+                {
+                    <p>Nie masz dostępu do tej strony.</p>
+                }
+            </NotAuthorized>
+            <Authorizing>
+                <p>Autoryzowanie...</p>
+            </Authorizing>
+        </AuthorizeRouteView>
+    </Found>
+    <NotFound>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <p>Nie znaleziono strony.</p>
+        </LayoutView>
+    </NotFound>
+</Router>
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState> authenticationStateTask { get; set; } = default!;
+    private ClaimsPrincipal context => (authenticationStateTask?.Result?.User)!;
+}

@@ -1,0 +1,163 @@
+﻿@page "/projects/{ProjectId:int}/devices/{DeviceId:int}"
+@attribute [Authorize]
+@using DystenSoftwateManagment.Managers
+@using DystenSoftwateManagment.Utility
+@using Microsoft.AspNetCore.Authorization
+@using DystenSoftwateManagment.Data
+@using DystenSoftwateManagment.Models
+@using DystenSoftwateManagment.Components.Controls
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using MudBlazor
+@rendermode InteractiveServer
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject NavigationManager Navigation
+@inject DevicesManager DevicesManager
+@inject DevicesSoftwaresManager DevicesSoftwaresManager
+@inject SoftwaresPlatformsManager SoftwaresPlatformsManager
+@inject PlatformsManager PlatformsManager
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+
+<PageTitle>Szczegóły</PageTitle>
+
+@if (isLoading)
+{
+    <div class="loading-container">
+        <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Tertiary" />
+        <span>Ładowanie</span>
+    </div>
+}
+else if (!isLoading && device is null)
+{
+    <div class="not-found">
+        <img src="/Assets/error.png" width="40" height="40" />
+        <div class="not-found-text">
+            <p>Nie znaleziono</p>
+            <a href="/">Powrót na stronę główną</a>
+        </div>
+    </div>
+}
+else
+{
+    <div class="header">
+        <button class="btn-go-back button-opacity" @onclick="GoBack">
+            <img src="/Assets/goBack.png" />
+        </button>
+        @device.Name
+
+        <AuthorizeView Roles="Developer">
+            <Authorized>
+                <ContextMenuButton ContextMenuClass="context-menu">
+                    <Activator>
+                        <button class="button-icon animation-down">
+                            <img src="/Assets/editsamll.png" style="height: 20px; width: 20px;" />
+                        </button>
+                    </Activator>
+                    <MenuContent>
+                        <button class="context-menu-item" @onclick="() => Edit()">
+                            <img src="/Assets/edit.png" />
+                            Edytuj urządzenie
+                        </button>
+                        <button class="context-menu-item" @onclick="EditNote">
+                            <img src="/Assets/note.png" />
+                            Otwórz notatkę
+                        </button>
+                        <button class="context-menu-item" @onclick="() => Delete()">
+                            <img src="/Assets/delete.png" />
+                            Usuń urządzenie
+                        </button>
+                    </MenuContent>
+                </ContextMenuButton>
+            </Authorized>
+        </AuthorizeView>
+
+        @if (isUpdating)
+        {
+            <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Tertiary" />
+        }
+
+    </div>
+    <MudTabs Elevation="0" SliderAnimation="false" KeepPanelsAlive>
+        <MudTabPanel Text="Oprogramowanie">
+            <div class="tabs-content">
+                <DeviceSoftwaresPage DeviceId="DeviceId" />
+            </div>
+        </MudTabPanel>
+        <MudTabPanel Text="Komponenty">
+            <div class="tabs-content">
+                <DeviceComponentsPage DeviceId="DeviceId" />
+            </div>
+        </MudTabPanel>
+    </MudTabs>
+}
+
+@code {
+
+    [Parameter] 
+    public int ProjectId { get; set; }
+
+    [Parameter] 
+    public int DeviceId { get; set; }
+
+    private Device? device;
+
+    private bool isLoading = true;
+    private bool isUpdating = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Load();
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task Load()
+    {
+        isUpdating = true;
+        StateHasChanged();
+
+        device = await DevicesManager.GetAsync(DeviceId);
+
+        isUpdating = false;
+        StateHasChanged();
+    }
+
+    private async Task Edit()
+    {
+        var result = await DevicesManager.EditAsync(device);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            Navigation.Refresh(true);
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    public async Task EditNote()
+    {
+        var result = await DevicesManager.EditNoteAsync(device);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    private async Task Delete()
+    {
+        var result = await DevicesManager.DeleteAsync(device.Id);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+            await GoBack();
+        }
+    }
+
+    private async Task GoBack() => await JS.InvokeVoidAsync("history.back");
+}

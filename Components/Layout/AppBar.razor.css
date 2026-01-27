@@ -1,0 +1,29 @@
+﻿.app-bar {
+    padding: 0 15px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    width: 100%;
+    height: 48px;
+}
+
+.logo-img {
+    width: 23px;
+    height: 18px;
+}
+
+.btn-action {
+    padding: 7.5px !important;
+}
+
+.icon {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.logo-img-full {
+    cursor: pointer;
+    width: 103px;
+    height: 15px;
+}

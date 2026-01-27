@@ -1,0 +1,33 @@
+﻿.project-section {
+    display: flex;
+    padding: 40px 0;
+}
+
+.header-desc {
+    display: flex;
+    flex-direction: column;
+}
+
+    .header-desc p:last-of-type {
+        font-family: var(--font-normal);
+        font-size: 0.875rem;
+        color: var(--font-125);
+    }
+
+    .header-desc p:first-of-type {
+        font-size: 1.25rem;
+        color: var(--font-255);
+    }
+
+.header-desc-space {
+    gap: 10px;
+}
+
+button {
+    font-size: 0.625rem !important;
+}
+
+.description {
+    max-width: 500px;
+    color: var(--font-150);
+}

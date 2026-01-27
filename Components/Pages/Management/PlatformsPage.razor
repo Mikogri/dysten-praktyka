@@ -1,0 +1,163 @@
+﻿@page "/manageplatforms"
+@attribute [Authorize]
+@using DystenSoftwateManagment.Components.Controls.List
+@using Microsoft.AspNetCore.Authorization
+@using DystenSoftwateManagment.Data
+@using DystenSoftwateManagment.Managers
+@using DystenSoftwateManagment.Utility   
+@using DystenSoftwateManagment.Models
+@using DystenSoftwateManagment.Components.Controls
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using MudBlazor
+@rendermode InteractiveServer
+@inject NavigationManager Navigation
+@inject PlatformsManager PlatformsManager
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+
+<PageTitle>Platformy</PageTitle>
+
+<ListView @ref="listView" 
+          TItem="Platform"
+          Title="Lista Platform"
+          IconSrc="/Assets/platform.png"
+          GetName="item => item.Name"
+          LoadItemsFunc="PlatformsManager.GetAllAsync">
+
+    <TableColumns>
+        <col />
+        <col />
+    </TableColumns>
+
+    <TableHeaders>
+        <MudTh>Nazwa</MudTh>
+        <MudTh>Urządzenia</MudTh>
+    </TableHeaders>
+
+    <RowTemplate Context="item">
+        <MudTd>@item.Name</MudTd>
+        <MudTd>@item.Devices.Count</MudTd>
+    </RowTemplate>
+
+    <ItemActionsMenu Context="item">
+        <button class="context-menu-item" @onclick="() => Edit(item)">
+            <img src="/Assets/edit.png" />
+            Edytuj platformę
+        </button>
+        <button class="context-menu-item" @onclick="() => EditNote(item)">
+            <img src="/Assets/note.png" />
+            Otwórz notatkę
+        </button>
+        <button class="context-menu-item" @onclick="() => Delete(item.Id)">
+            <img src="/Assets/delete.png" />
+            Usuń platformę
+        </button>
+    </ItemActionsMenu>
+
+    <ActionsContent>
+        <button class="button-add" @onclick="Create">
+            <img src="/Assets/plus.png" width="15" height="15" />
+            Nowa platforma
+        </button>
+    </ActionsContent>
+
+    <CardInnerContent Context="item">
+        Urządzenia: @item.Devices.Count
+    </CardInnerContent>
+
+</ListView>
+
+@code {
+
+    private ListView<Platform>? listView;
+
+    // private List<Platform> platforms = new();
+    // private int totalDevices = 0;
+
+    // private string searchText = string.Empty;
+    // private bool isLoading = true;
+    // private bool isUpdating = false;
+    // private bool isGridView = true;
+
+    // private List<Platform> filteredList => platforms.Where(d => SearchFunc(d)).ToList();
+
+    // protected override async Task OnAfterRenderAsync(bool firstRender)
+    // {
+    //     if (firstRender)
+    //     {
+    //         isGridView = await localStorage.GetItemAsync<bool>("isGridView");
+    //         await Load();
+    //         isLoading = false;
+    //         StateHasChanged();
+    //     }
+    // }
+
+    // private bool SearchFunc(Platform platform)
+    // {
+    //     return platform.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase);
+    // }
+
+    // private async Task Load()
+    // {
+    //     isUpdating = true;
+    //     StateHasChanged();
+
+    //     totalDevices = await PlatformsManager.CountAllAsync();
+    //     platforms = await PlatformsManager.GetAllAsync();
+
+    //     isUpdating = false;
+    //     StateHasChanged();
+    // }
+
+    public async Task Create()
+    {
+        var result = await PlatformsManager.AddAsync();
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            listView?.LoadAsync();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    public async Task Edit(Platform platform)
+    {
+        var result = await PlatformsManager.EditAsync(platform);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            listView?.LoadAsync();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    public async Task EditNote(Platform platform)
+    {
+        var result = await PlatformsManager.EditNoteAsync(platform);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    public async Task Delete(int id)
+    {
+        var result = await PlatformsManager.DeleteAsync(id);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            listView?.LoadAsync();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    // public void SwitchView(bool isGrid)
+    // {
+    //     isGridView = isGrid;
+    //     localStorage.SetItemAsync("isGridView", isGridView);
+    // }
+}

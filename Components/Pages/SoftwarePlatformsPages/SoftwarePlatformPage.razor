@@ -1,0 +1,178 @@
+﻿@page "/software/{SoftwareId:int}/platform/{PlatformId:int}"
+@attribute [Authorize]
+@using DystenSoftwateManagment.Components.Controls.List
+@using DystenSoftwateManagment.Data
+@using DystenSoftwateManagment.Models
+@using DystenSoftwateManagment.Managers
+@using DystenSoftwateManagment.Components.Controls
+@using DystenSoftwateManagment.Utility
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using MudBlazor
+@rendermode InteractiveServer
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject NavigationManager Navigation
+@inject SoftwaresPlatformsManager SoftwaresPlatformsManager
+@inject DevicesSoftwaresManager DevicesSoftwaresManager
+@inject PlatformsManager PlatformsManager
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+
+<PageTitle>Soft Urządzenia</PageTitle>
+
+<ListView @ref="listView" 
+          TItem="SoftwarePlatform"
+          Title="Lista Komponentów"
+          IconSrc="/Assets/software.png"
+          GetName="item => item.Name"
+          LoadItemsFunc="() => Load()">
+
+    <TableColumns>
+        <col />
+        <col />
+        <col />
+        <col />
+        <col />
+    </TableColumns>
+
+    <TableHeaders>
+        <MudTh>Nazwa</MudTh>
+        <MudTh>Typ softu</MudTh>
+        <MudTh>Soft</MudTh>
+        <MudTh>Rozmiar</MudTh>
+        <MudTh>Status</MudTh>
+    </TableHeaders>
+
+    <RowTemplate Context="item">
+        <MudTd>@(deviceSoftware?.Name ?? "---")</MudTd>
+        <MudTd>@(deviceSoftware?.SoftwareType.Name ?? "---")</MudTd>
+
+        <MudTd>
+            <div class="platform-data">
+                <a href="/download/@item.Id" download="@item.FileName">
+                    @($"{item.Name}")
+                </a>
+                <p>
+                    @item.ModificationDate.ToString("yyyy-MM-dd")
+                </p>
+            </div>
+        </MudTd>
+
+        <MudTd>@Utilities.ByteToMb(item.FileLength)</MudTd>
+
+        <MudTd>
+            <div class="@(item.IsActive ? "latest" : "old")">
+                @(item.IsActive ? "Najnowsze" : "Starsze")
+            </div>
+        </MudTd>
+    </RowTemplate>
+
+    <ItemActionsMenu Context="item">
+        <button class="context-menu-item" @onclick="() => Edit(item.Id)">
+            <img src="/Assets/edit.png" />
+            Edytuj oprogramowanie
+        </button>
+        <button class="context-menu-item" @onclick="() => EditNote(item)">
+            <img src="/Assets/note.png" />
+            Otwórz notatkę
+        </button>
+        <button class="context-menu-item" @onclick="() => Delete(item.Id)">
+            <img src="/Assets/delete.png" />
+            Usuń oprogramowanie
+        </button>
+    </ItemActionsMenu>
+
+    <ActionsContent>
+        <button class="button-add" @onclick="Create">
+            <img src="/Assets/plus.png" width="15" height="15" />
+            Nowe oprogramowanie
+        </button>
+    </ActionsContent>
+
+    <HeaderContent>
+        <button class="btn-go-back button-opacity" @onclick="GoBack">
+            <img src="/Assets/goBack.png" />
+        </button>
+        <div class="header-title">
+            <span>@deviceSoftware!.Name</span>
+            <span class="separator">/</span>
+            <span>@platformName</span>
+            <span class="separator">/</span>
+            <span>@deviceSoftware.SoftwareType.Name</span>
+        </div>
+    </HeaderContent>
+
+</ListView>
+
+@code {
+
+    [Parameter]
+    public int? SoftwareId { get; set; }
+
+    [Parameter]
+    public int? PlatformId { get; set; }
+
+    private ListView<SoftwarePlatform>? listView;
+
+    private DeviceSoftware? deviceSoftware { get; set; } = new();
+
+    private string? platformName;
+
+    public async Task<List<SoftwarePlatform>> Load()
+    {
+        deviceSoftware = await SoftwaresPlatformsManager.GetAsync(SoftwareId, PlatformId);
+        platformName = (await PlatformsManager.GetAsync(PlatformId))?.Name;
+        
+        return deviceSoftware?.SoftwarePlatforms
+            .OrderByDescending((s) => s.IsActive)
+            .ThenByDescending((s) => s.ModificationDate)
+            .ToList() ?? [];
+    }
+
+    private async void Create()
+    {
+        var result = await SoftwaresPlatformsManager.AddAsync(PlatformId ?? 0, SoftwareId ?? 0);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            await listView!.LoadAsync();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    private async void Edit(int id)
+    {
+        var result = await SoftwaresPlatformsManager.EditAsync(id, PlatformId ?? 0, SoftwareId ?? 0);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            await listView!.LoadAsync();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    public async Task EditNote(SoftwarePlatform platform)
+    {
+        var result = await SoftwaresPlatformsManager.EditNoteAsync(platform);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    public async Task Delete(int id)
+    {
+        var result = await SoftwaresPlatformsManager.DeleteAsync(id);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            await listView!.LoadAsync();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    private async Task GoBack() => await JS.InvokeVoidAsync("history.back");
+}

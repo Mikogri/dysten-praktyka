@@ -1,0 +1,141 @@
+﻿@using DystenSoftwateManagment.Interfaces
+@using DystenSoftwateManagment.Models
+@using MudBlazor
+@typeparam TItem where TItem : IHasId, IHasName
+
+<MudDialog Class="dialog-background"
+           ActionsClass="dialog-actions"
+           ContentClass="dialog-content"
+           TitleClass="dialog-header">
+
+    <TitleContent>
+        <input class="context-select-search-input" placeholder="Szukaj w liście..." @bind="searchText" @bind:event="oninput" />
+
+        <button class="button-icon button-opacity">
+            <img src="/Assets/close.png" @onclick="Cancel" />
+        </button>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="5" Style="height: 200px;">
+            
+            @if (!Items.Any())
+            {
+                <div class="empty-list-full">
+                    <div class="empty-list-text">
+                        <p>Brak elementów</p>
+                        <p>Nie dodano jeszcze elementów</p>
+                    </div>
+                </div>
+            }
+            else if (!filteredItems.Any())
+            {
+                <div class="empty-list-full">
+                    <div class="empty-list-text">
+                        <p>Brak wyników</p>
+                        <p>Nie znaleziono elementów</p>
+                    </div>
+                </div>
+            }
+            else
+            {
+                @foreach (var item in filteredItems)
+                {
+                    <div class="actions">
+                        @if (item is IHasIsActive isActiveItem)
+                        {
+                            <div class="status-dot @isActiveItem.IsActive" />
+                        }
+                        <CheckBox OnChange="() => SelectComponent(item)"
+                                  Value="IsComponentSelect(item)"
+                                  Label="@item.Name"
+                                  SpaceBetween />
+                    </div>
+                }
+            }
+
+            @if (!string.IsNullOrWhiteSpace(errorText))
+            {
+                <span class="error-text">@errorText</span>
+            }
+
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <button class="button-primary" @onclick="Submit" disabled="@isLoading">
+            @if (isLoading)
+            {
+                <div class="progress-bar">
+                    <MudProgressCircular Indeterminate="true"
+                                         Size="Size.Small"
+                                         Color="Color.Secondary" />
+                </div>
+            }
+            else
+            {
+                <span>@ButtonText</span>
+            }
+        </button>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public List<TItem> Items { get; set; }
+
+    [Parameter]
+    public string ButtonText { get; set; } = "Zapisz";
+
+    [Parameter]
+    public List<TItem> SelectedItems { get; set; }
+
+    private string errorText = string.Empty;
+    private string searchText = string.Empty;
+
+    private bool isLoading = false;
+    private bool? onlyActive;
+
+    private List<TItem> filteredItems =>
+        Items.Where(d =>
+            d.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+        .ToList();
+
+    private async Task Submit()
+    {
+        errorText = string.Empty;
+        isLoading = true;
+        await Task.Delay(10);
+
+        try
+        {
+            MudDialog.Close(DialogResult.Ok(SelectedItems));
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void SelectComponent(TItem model)
+    {
+        if (SelectedItems.Any((c) => c.Id == model.Id))
+        {
+            SelectedItems.RemoveAll((c) => c.Id == model.Id);
+        }
+        else
+        {
+            SelectedItems.Add(model);
+        }
+    }
+
+    private bool IsComponentSelect(TItem model)
+    {
+        return SelectedItems.Any((c) => c.Id == model.Id);
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

@@ -1,0 +1,89 @@
+﻿body {
+    background-image: url('/Assets/login_background.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    min-height: 100vh;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.container {
+    background-color: rgba(0,0,0,0.2);
+    border: 1px solid var(--border);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 40px;
+    width: 350px;
+    border-radius: 15px;
+    backdrop-filter: blur(8px);
+}
+
+.header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    margin: 0;
+}
+
+.header-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.header-text p:first-of-type {
+    font-size: 1.5rem;
+}
+
+    .header-text p:last-of-type {
+        font-size: 0.75rem;
+        color: var(--font-125);
+        text-align: center;
+    }
+
+.form-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.button-primary {
+    outline: none;
+    cursor: pointer;
+    border: none;
+}
+
+input[type=text], input[type=password] {
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 7.5px;
+    transition: 0.2s;
+    background-color: rgba(0,0,0,0.2);
+    width: 100%;
+    outline: none;
+    box-sizing: border-box;
+    backdrop-filter: blur(8px);
+}
+
+    input[type=text]::placeholder, input[type=password]::placeholder {
+        color: var(--font-125);
+    }
+
+    input[type=text]:focus, input[type=password]:focus {
+        border: 1px solid var(--border-sharp);
+    }
+
+.error-text {
+    font-size: 0.825rem;
+    color: var(--light-red);
+    font-family: var(--font-normal);
+    font-weight: 400;
+}

@@ -1,0 +1,205 @@
+﻿@using DystenSoftwateManagment.Models
+@using DystenSoftwateManagment.Utility
+@using DystenSoftwateManagment.Interfaces
+@using MudBlazor
+@inject ISnackbar Snackbar
+
+@typeparam TModel where TModel : class, IHasFile<TFile>, new()
+@typeparam TFile where TFile : class, new()
+
+<MudDialog Class="dialog-background"
+           ActionsClass="dialog-actions"
+           ContentClass="dialog-content"
+           TitleClass="dialog-header">
+
+    <TitleContent>
+        @MudDialog.Title
+        <button class="button-icon button-opacity">
+            <img src="/Assets/close.png" @onclick="Cancel" />
+        </button>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="4">
+
+            <InputField @bind-Value="_editModel.Name"
+                        Placeholder="@InputLabel"
+                        Label="@InputLabel" />
+
+            <MudFileUpload T="IBrowserFile"
+                           FilesChanged="UploadFile"
+                           MaximumFileCount="1"
+                           Accept="@FileAcceptance"
+                           Hidden="@false"
+                           InputClass="absolute mud-width-full mud-height-full overflow-hidden z-10"
+                           InputStyle="opacity:0"
+                           tabindex="-1"
+                           @ondrop="@ClearDragClass"
+                           @ondragenter="@SetDragClass"
+                           @ondragleave="@ClearDragClass"
+                           @ondragend="@ClearDragClass">
+
+                <ActivatorContent>
+                    <MudPaper Outlined="true"
+                              Class="@($"{_dragClass} centered-paper")">
+
+                        <button class="button-background-light normal-font">
+                            <img src="/Assets/downloadcloud.png" />
+                            @FileDisplayName
+                        </button>
+                    </MudPaper>
+                </ActivatorContent>
+
+            </MudFileUpload>
+
+            @if (ShowBoolInput)
+            {
+                <CheckBox @bind-Value="_editModel.IsActive"
+                          Label="@BoolInputLabel" />
+            }
+
+            @if (!string.IsNullOrWhiteSpace(errorText))
+            {
+                <span class="error-text">@errorText</span>
+            }
+
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <button class="button-primary" @onclick="Submit" disabled="@isLoading">
+            @if (isLoading)
+            {
+                <MudProgressCircular Indeterminate="true"
+                                     Size="Size.Small"
+                                     Color="Color.Secondary" />
+            }
+            else
+            {
+                <span>@ButtonText</span>
+            }
+        </button>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter]
+    public string ButtonText { get; set; } = "Zapisz";
+
+    [Parameter]
+    public string FileAcceptance { get; set; } = ".zip";
+
+    [Parameter]
+    public bool ShowBoolInput { get; set; } = true;
+
+    [Parameter]
+    public string InputLabel { get; set; } = "Nazwa";
+
+    [Parameter]
+    public string BoolInputLabel { get; set; } = "Aktywny";
+
+    [Parameter]
+    public TModel Model { get; set; } = null!;
+
+    [Parameter]
+    public Func<TModel, Task<string>>? ValidationResult { get; set; }
+
+    private const string defaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mud-width-full";
+    private string _dragClass = defaultDragClass;
+
+    private TModel _editModel = null!;
+    private bool isLoading;
+    private string errorText = string.Empty;
+
+    private string FileDisplayName => _editModel.FileName is not null
+        ? ((dynamic)_editModel.FileName)
+        : "Wybierz plik";
+
+    protected override void OnInitialized()
+    {
+        _editModel = new TModel
+        {
+            Id = Model.Id,
+            Name = Model.Name,
+            FileName = Model.FileName,
+            IsActive = Model.IsActive,
+            FileData = Model.FileData is null ? null : CopyFile(Model.FileData)
+        };
+    }
+
+    private static TFile? CopyFile(TFile? file)
+    {
+        if (file == null) return null;
+
+        dynamic f = file;
+        dynamic copy = new TFile();
+        copy.Id = f.Id;
+        copy.Data = null;
+
+        return copy;
+    }
+
+    private async Task Submit()
+    {
+        errorText = string.Empty;
+        isLoading = true;
+        await Task.Delay(10);
+
+        try
+        {
+            if (ValidationResult != null)
+            {
+                var result = await ValidationResult(_editModel);
+                if (!string.IsNullOrEmpty(result))
+                {
+                    errorText = result;
+                    return;
+                }
+            }
+
+            MudDialog.Close(DialogResult.Ok(_editModel));
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task UploadFile(IBrowserFile file)
+    {
+        if (file == null)
+        {
+            _editModel.FileData = null;
+            Snackbar.Add("Plik był pusty", Severity.Error);
+            return;
+        }
+
+        try
+        {
+            isLoading = true;
+            using var stream = file.OpenReadStream(maxAllowedSize: ConstData.MAX_SOFTWARE_FILE_SIZE);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+
+            dynamic f = new TFile();
+            f.Data = ms.ToArray();
+
+            _editModel.FileName = file.Name;
+            _editModel.FileData = f;
+            isLoading = false;
+        }
+        catch
+        {
+            Snackbar.Add("Nie udało się wgrać pliku", Severity.Error);
+        }
+    }
+
+    private void SetDragClass() => _dragClass = $"{defaultDragClass} mud-border-primary";
+
+    private void ClearDragClass() => _dragClass = defaultDragClass;
+}

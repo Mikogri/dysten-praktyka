@@ -1,0 +1,70 @@
+﻿@using DystenSoftwateManagment.Components.Controls
+@using DystenSoftwateManagment.Components.Controls.Dialogs
+@using DystenSoftwateManagment.Managers
+@using MudBlazor
+@using Microsoft.AspNetCore.Identity;
+@using Microsoft.AspNetCore.Components.Authorization
+@inherits LayoutComponentBase
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager Navigation
+@inject SignInManager<IdentityUser> SignInManager
+@inject DataBaseManager DataBaseManager
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<div class="app-bar">
+    <div class="logo">
+        <img src="/Assets/dystenLogo.png" class="logo-img-full" @onclick="NavigateProjects" />
+    </div>
+    <MudSpacer />
+    <ContextMenuButton ContextMenuClass="context-menu" 
+    AnchorOrigin="Origin.BottomRight" 
+    TransformOrigin="Origin.TopRight">
+
+        <Activator>
+            <button class="button-icon-outlined btn-action">
+                <img src="/Assets/user.png" class="icon" />
+            </button>
+        </Activator>
+        <MenuContent>
+            <button class="context-menu-item">
+                <img src="/Assets/user.png" />
+                @userName
+            </button>
+            <button class="context-menu-item" @onclick="() => Logout()">
+                <img src="/Assets/logout.png" />
+                Wyloguj
+            </button>
+        </MenuContent>
+    </ContextMenuButton>
+</div>
+
+@code {
+
+    private bool _open;
+
+    private void ToggleOpen() => _open = !_open;
+
+    private string? userName;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity != null && user.Identity.IsAuthenticated)
+        {
+            userName = user.Identity.Name;
+        }
+    }
+
+    private void NavigateProjects()
+    {
+        Navigation.NavigateTo("/projects", forceLoad: true);
+    }
+
+    private void Logout()
+    {
+        Navigation.NavigateTo("/account/logout", forceLoad: true);
+    }
+}

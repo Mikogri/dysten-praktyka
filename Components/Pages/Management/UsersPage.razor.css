@@ -1,0 +1,44 @@
+﻿.card-item-inner-text, .card-item-inner-text span {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    font-size: 0.75rem;
+    color: var(--font-125);
+    gap: 5px;
+}
+
+.role-list {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+    .role-list p {
+        margin: 0;
+        white-space: nowrap;
+    }
+
+.role-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.role-dot {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+}
+
+    .role-dot.admin {
+        background-color: var(--light-red);
+    }
+
+    .role-dot.user {
+        background-color: var(--light-blue);
+    }
+
+    .role-dot.developer {
+        background-color: var(--light-green);
+    }

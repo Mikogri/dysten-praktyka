@@ -1,0 +1,44 @@
+﻿@if (!SpaceBetween)
+{
+	<div class="input-wrapper">
+		<input type="checkbox" @bind="Value" @bind:event="oninput" @onchange="OnChange" />
+		<span class="input-label">@Label</span>
+	</div>
+}
+else
+{
+	<div class="input-wrapper-space-between">
+		<span class="input-label">@Label</span>
+		<input type="checkbox" @bind="Value" @bind:event="oninput" @onchange="OnChange" />
+	</div>
+}
+
+@code {
+	private bool _value;
+
+	[Parameter]
+	public bool Value
+	{
+		get => _value;
+		set
+		{
+			if (_value != value)
+			{
+				_value = value;
+				ValueChanged.InvokeAsync(value);
+			}
+		}
+	}
+
+	[Parameter]
+	public EventCallback<bool> ValueChanged { get; set; }
+
+	[Parameter]
+	public EventCallback OnChange { get; set; }
+
+	[Parameter]
+	public string Label { get; set; } = "Label";
+
+	[Parameter]
+	public bool SpaceBetween { get; set; } = false;
+}

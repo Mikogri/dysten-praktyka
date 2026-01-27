@@ -1,0 +1,327 @@
+﻿@rendermode InteractiveServer
+@using DystenSoftwateManagment.Components.Controls.Dialogs
+@using DystenSoftwateManagment.Models
+@using DystenSoftwateManagment.Managers
+@using DystenSoftwateManagment.Utility
+@inject PlatformsManager PlatformsManager
+@inject SoftwaresPlatformsManager SoftwaresPlatformsManager
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<div class="full-page @fullPageClass">
+    <div class="dialog @dialogClass">
+        @if (IsInitializing)
+        {
+            <div class="loading-container">
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Tertiary" />
+                <span>Ładowanie</span>
+            </div>
+        }
+        else
+        {
+            <div class="header">
+                <button class="button-icon button-opacity" @onclick="Cancel">
+                    <img src="/Assets/goBack.png"/>
+                </button>
+                Dodaj oprogramowanie na platformy
+            </div>
+            <div class="form">
+                <div class="form-section">
+                    <div class="form-input">
+                        Wersja
+                        <input class="input-field" placeholder="Wersja" @bind="version"/>
+                    </div>
+                    <div class="form-input">
+                        Opis
+                        <textarea class="description-input" placeholder="Opis" rows="4" @bind="description" />
+                    </div>
+                </div>
+                <div class="divider"/>
+
+                @foreach (var row in selectedPlatformRows)
+                {
+                    <div class="platform">
+                        <div class="platform-start">
+                            <button class="button-icon button-opacity small-icon" @onclick="() => RemovePlatformFromSelection(row)">
+                                <img src="/Assets/close.png" />
+                            </button>
+                            @row.Name
+                        </div>
+                        <div class="platform-actions">
+                            <button class="button-latest @(row.IsLatest ? "latest" : "old")" @onclick="() => ToggleSingleLatest(row)">
+                                @(row.IsLatest ? "Najnowsze" : "Starsze")
+                            </button>
+
+                            <MudFileUpload T="IBrowserFile"
+                                           FilesChanged="(file) => UploadFile(file, row)"
+                                           MaximumFileCount="1"
+                                           Accept=".zip"
+                                           Hidden="@false"
+                                           InputClass="absolute mud-width-full mud-height-full overflow-hidden z-10"
+                                           InputStyle="opacity:0"
+                                           tabindex="-1">
+
+                                <ActivatorContent>
+                                    <MudPaper>
+
+                                        <button class="button-background button-upload">
+                                            <img src="/Assets/downloadcloud.png" />
+                                            <span class="normal-font">
+                                                @($"{row.FileName ?? "Wybierz plik .zip"}")
+                                            </span>
+                                        </button>
+                                    </MudPaper>
+                                </ActivatorContent>
+                            </MudFileUpload>
+                        </div>
+                    </div>
+                    <div class="divider" />
+                }
+
+                <div class="add-platform-container">
+                    <ContextMenuButton ContextMenuClass="context-select"
+                                       CloseOnMenuClick="false"
+                                       AnchorOrigin="Origin.TopCenter"
+                                       @ref="contextSelectRef"
+                                       TransformOrigin="Origin.BottomCenter">
+                        <Activator>
+                            <button class="button-background padding-wide">
+                                Dodaj platformę
+                            </button>
+                        </Activator>
+                        <MenuContent>
+                            <div class="context-select-header">
+                                <img src="/Assets/search.png" width="15" height="15"/>
+                                <input class="context-select-search-input" 
+                                        @bind="platformSearch" 
+                                        @bind:event="oninput" 
+                                        placeholder="Wybierz platformę..." />
+
+                            </div>
+                            <div class="context-select-content">
+                                @if (avaiablePlatforms.Count > 0)
+                                {
+                                    @foreach (var row in avaiablePlatforms)
+                                    {
+                                        <div class="context-select-item" @onclick="() => SelectPlatform(row)">
+                                            <div class="context-select-item-start">
+                                                <img src="/Assets/platform.png" width="12" height="12" />
+                                                <span>@row.Name</span>
+                                            </div>
+                                            <img src="/Assets/arrow.png" width="10" height="10" />
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="context-select-empty-list">
+                                        Brak platform
+                                    </div>
+                                }
+                            </div>
+                        </MenuContent>
+                    </ContextMenuButton>
+                </div>
+            </div>
+            <div class="actions" style="justify-content: flex-start;">
+                <CheckBox @bind-Value="allLatest" Label="Wszystkie wersje najnowsze" OnChange="@ToggleAllLatest" />
+            </div>
+            <div class="actions">
+                <button class="button-big" @onclick="Cancel">
+                    Anuluj
+                </button>
+                <button class="button-add button-big" @onclick="Submit" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <div class="progress-bar">
+                            <MudProgressCircular Indeterminate="true"
+                                                 Size="Size.Small"
+                                                 Color="Color.Secondary" />
+                        </div>
+                    }
+                    else
+                    {
+                        <span>Zapisz</span>
+                    }
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+
+    [Parameter]
+    public int DeviceId { get; set; }
+
+    [Parameter]
+    public int SoftwareId { get; set; }
+
+    [Parameter]
+    public Func<SoftwarePlatform, int, int, Task<string>> ValidationResult { get; set; }
+
+    [Parameter]
+    public EventCallback OnResult { get; set; }
+
+    [Parameter]
+    public Func<Task> ReloadAction { get; set; }
+
+    private ContextMenuButton? contextSelectRef;
+
+    public string version { get; set; }
+    public string description { get; set; }
+
+    public HashSet<PlatformRow> selectedPlatformRows { get; set; } = new();
+    public List<Platform> allPlatforms { get; set; } = new();
+
+    private List<Platform> avaiablePlatforms => allPlatforms
+        .Where(p => !selectedPlatformRows.Any(row => row.PlatformId == p.Id))
+        .Where(p => string.IsNullOrEmpty(platformSearch) || p.Name.Contains(platformSearch, StringComparison.OrdinalIgnoreCase))
+        .ToList();
+
+    bool isLoading = false;
+    bool IsInitializing = true;
+    private string platformSearch = string.Empty;
+
+    private string dialogClass = string.Empty;
+    private string fullPageClass = string.Empty;
+
+    bool allLatest = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        allPlatforms = await PlatformsManager.GetDevicePlatformsAsync(DeviceId);
+        IsInitializing = false;
+    }
+
+    private void ToggleSingleLatest(PlatformRow row)
+    {
+        row.IsLatest = !row.IsLatest;
+        UpdateAllLatestState();
+    }
+
+    private void ToggleAllLatest()
+    {
+        foreach (var row in selectedPlatformRows)
+        {
+            row.IsLatest = allLatest;
+        }
+    }
+
+    private void UpdateAllLatestState()
+    {
+        allLatest = selectedPlatformRows.All(x => x.IsLatest);
+    }
+
+    private void SelectPlatform(Platform platform)
+    {
+        selectedPlatformRows.Add(new PlatformRow(platform.Id, platform.Name));
+        contextSelectRef?.CloseMenu();
+    }
+
+    private void RemovePlatformFromSelection(PlatformRow row)
+    {
+        selectedPlatformRows.Remove(row);
+    }
+
+    private async Task UploadFile(IBrowserFile file, PlatformRow row)
+    {
+        if (file == null)
+        {
+            row.FileName = string.Empty;
+            row.Data = [];
+            Snackbar.Add("Plik był pusty", Severity.Error);
+            return;
+        }
+
+        isLoading = true;
+
+        try
+        {
+            using var stream = file.OpenReadStream(maxAllowedSize: ConstData.MAX_SOFTWARE_FILE_SIZE);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+
+            row.Data = ms.ToArray();
+            row.FileName = file.Name;
+        }
+        catch
+        {
+            row.FileName = string.Empty;
+            Snackbar.Add("Nie udało się wgrać pliku", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task Cancel()
+    {
+        if (!isLoading)
+        {
+            if (AnyChanges())
+            {
+                var parameters = new DialogParameters<DialogConfirm>
+                {
+                    { x => x.ContentText, "Masz niezapisane zmiany. Jeśli teraz wyjdziesz, wszystkie zmiany zostaną utracone." },
+                    { x => x.ButtonText, "Porzuć" },
+                };
+
+                var dialog = await DialogService.ShowAsync<DialogConfirm>("Porzucić zmiany?", parameters);
+                var result = await dialog.Result;
+
+                if (!result.Canceled)
+                {
+                    await Close();
+                }
+            }
+            else
+            {
+                await Close();
+            }
+        }
+    }
+
+    private async Task Submit()
+    {
+        isLoading = true;
+        await Task.Delay(10);
+
+        var result = await SoftwaresPlatformsManager.AddMultiPlatformsAsync(
+            DeviceId,
+            SoftwareId,
+            version,
+            description,
+            selectedPlatformRows
+        );
+
+        await ReloadAction();
+
+        isLoading = false;
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+
+            if (result.OperationStatus == OperationResult.Success)
+            {
+                await Close();
+            }
+        }
+    }
+
+    private async Task Close()
+    {
+        dialogClass = "slide-out";
+        fullPageClass = "fade-out";
+        StateHasChanged();
+        await Task.Delay(200); // Animation duration
+        await OnResult.InvokeAsync();
+    }
+
+    private bool AnyChanges() =>
+        !string.IsNullOrEmpty(version) ||
+        !string.IsNullOrEmpty(description) ||
+        selectedPlatformRows.Any();
+}

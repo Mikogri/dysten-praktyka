@@ -1,0 +1,139 @@
+﻿@using MudBlazor
+@rendermode InteractiveServer
+
+<MudDialog Class="dialog-background"
+           ActionsClass="dialog-actions"
+           ContentClass="dialog-content"
+           TitleClass="dialog-header">
+
+    <TitleContent>
+        @MudDialog.Title
+
+        <button class="button-icon button-opacity">
+            <img src="/Assets/close.png" @onclick="Cancel" />
+        </button>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="5">
+
+            <InputField @bind-Value="@UserName" Placeholder="Login" Label="Login użytkownika" />
+
+            @if (!IsEdting)
+            {
+                <InputField @bind-Value="@Password" Placeholder="Hasło" Label="Hasło użytkownika" IsPassword="true"/>
+            }
+
+            <MudStack Spacing="4">
+                <span class="input-label">Rola użytkownika</span>
+                <MudSelect T="string"
+                           Class="custom-select"
+                           Placeholder="Rola"
+                           @bind-Value="Role">
+
+                    @foreach (var option in Roles)
+                    {
+                        <MudSelectItem Value="@option">@option</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudStack>
+
+            @if (!string.IsNullOrWhiteSpace(errorText))
+            {
+                <span class="error-text">@errorText</span>
+            }
+
+        </MudStack>
+
+    </DialogContent>
+    <DialogActions>
+        <button class="button-primary" @onclick="Submit" disabled="@isLoading">
+            @if (isLoading)
+            {
+                <div class="progress-bar">
+                    <MudProgressCircular Indeterminate="true"
+                                         Size="Size.Small"
+                                         Color="Color.Secondary" />
+                </div>
+            }
+            else
+            {
+                <span>@ButtonText</span>
+            }
+        </button>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public string UserName { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Password { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Role { get; set; }
+
+    [Parameter]
+    public bool IsEdting { get; set; } = false;
+
+    [Parameter]
+    public List<string> Roles { get; set; }
+
+    [Parameter]
+    public string ButtonText { get; set; } = "Dodaj";
+
+    [Parameter]
+    public Func<string, string, string, string, bool, Task<string>> ValidationResult { get; set; }
+
+    private string errorText = string.Empty;
+
+    private string orginalUserName = string.Empty;
+
+    private bool isLoading = false;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        orginalUserName = UserName;
+    }
+
+    private async Task Submit()
+    {
+        errorText = string.Empty;
+        isLoading = true;
+        await Task.Delay(10);
+
+        try
+        {
+            string result = string.Empty;
+
+            if (ValidationResult != null)
+            {
+                result = result = await ValidationResult(UserName, orginalUserName, Password, Role, IsEdting);
+            }
+
+            if (string.IsNullOrEmpty(result))
+            {
+                MudDialog.Close(DialogResult.Ok(new Dictionary<string, string>{
+                { "UserName", UserName },
+                { "Password", Password },
+                { "Role", Role },
+            }));
+            }
+            else
+            {
+                errorText = result;
+            }
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

@@ -1,0 +1,94 @@
+﻿.card-item, .card-item-arrow {
+    display: flex;
+    background-color: var(--panel);
+    border: solid 1px var(--border);
+    border-radius: 7.5px;
+    padding: 20px;
+    min-width: 300px;
+    max-width: 500px;
+    width: 100%;
+    box-sizing: border-box;
+    height: 140px;
+    transition: 0.2s;
+}
+
+    .card-item:hover {
+        border: 1px solid var(--border-sharp);
+    }
+
+.card-item-start {
+    display: flex;
+    gap: 20px;
+    width: calc(100% - 75px);
+}
+
+.card-item-header {
+    display: inline-block;
+    font-size: 1.125rem;
+    font-weight: 500;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.card-item-text {
+    display: inline-block;
+    flex-direction: column;
+    white-space: nowrap;
+    width: 100%;
+    gap: 10px;
+}
+
+.card-item-inner-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    max-width: 100%;
+    font-size: 0.75rem;
+    color: var(--font-125);
+    height: 100%;
+    width: 175px;
+}
+
+    .card-item-inner-text p {
+        margin: 0;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        color: var(--font-125);
+        font-size: 0.75rem;
+        height: min-content;
+    }
+
+.card-item-progress-bar {
+    width: 100%;
+    height: 2px;
+    background-color: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 8px;
+}
+
+.card-item-arrow {
+    cursor: pointer;
+}
+
+    .card-item-arrow:hover {
+        background-color: var(--hover);
+    }
+
+    .card-item-arrow:active {
+        background-color: var(--pressed);
+    }
+
+.arrow-img {
+    opacity: 0.5;
+    width: 15px;
+    height: 15px;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    transform: translateX(0);
+}
+
+.card-item-arrow:hover .arrow-img {
+    opacity: 1;
+    transform: translateX(3px);
+}

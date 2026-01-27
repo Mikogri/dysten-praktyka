@@ -1,0 +1,135 @@
+﻿@page "/components"
+@attribute [Authorize]
+@using DystenSoftwateManagment.Components.Controls.List
+@using Microsoft.AspNetCore.Authorization
+@using DystenSoftwateManagment.Data
+@using DystenSoftwateManagment.Managers
+@using DystenSoftwateManagment.Utility
+@using DystenSoftwateManagment.Models
+@using DystenSoftwateManagment.Components.Controls
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using MudBlazor
+@rendermode InteractiveServer
+@inject NavigationManager Navigation
+@inject DeviceComponentsManager DeviceComponentsManager
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+
+<PageTitle>Komponenty</PageTitle>
+
+<ListView @ref="listView" 
+          TItem="DeviceComponent"
+          Title="Lista Komponentów"
+          IconSrc="/Assets/cube.png"
+          GetName="item => item.Name"
+          LoadItemsFunc="DeviceComponentsManager.GetAllAsync">
+
+    <TableColumns>
+        <col />
+        <col />
+        <col />
+        <col />
+    </TableColumns>
+
+    <TableHeaders>
+        <MudTh>Nazwa</MudTh>
+        <MudTh>Model</MudTh>
+        <MudTh>Producent</MudTh>
+        <MudTh>Status</MudTh>
+    </TableHeaders>
+
+    <RowTemplate Context="item">
+        <MudTd>@item.Name</MudTd>
+        <MudTd>@item.Model</MudTd>
+        <MudTd>@item.Manufacturer</MudTd>
+        <MudTd>
+            <div class="status-container">
+                @(item.IsActive ? "aktywny" : "nie aktywny")
+                <div class="status-dot @item.IsActive" />
+            </div>
+        </MudTd>
+    </RowTemplate>
+
+    <ItemActionsMenu Context="item">
+        <button class="context-menu-item" @onclick="() => Edit(item)">
+            <img src="/Assets/edit.png" />
+            Edytuj komponent
+        </button>
+        <button class="context-menu-item" @onclick="() => EditNote(item)">
+            <img src="/Assets/note.png" />
+            Otwórz notatkę
+        </button>
+        <button class="context-menu-item" @onclick="() => Delete(item.Id)">
+            <img src="/Assets/delete.png" />
+            Usuń komponent
+        </button>
+    </ItemActionsMenu>
+
+    <ActionsContent>
+        <button class="button-add" @onclick="Create">
+            <img src="/Assets/plus.png" width="15" height="15" />
+            Nowy komponent
+        </button>
+    </ActionsContent>
+
+    <CardInnerContent Context="item">
+        <p>Producent: @item.Manufacturer</p>
+        <p>Model: @item.Model</p>
+        <div class="status-container">
+            @($"Status: {(item.IsActive ? "aktywny" : "nie aktywny")}")
+            <div class="status-dot @item.IsActive" />
+        </div>
+    </CardInnerContent>
+
+</ListView>
+
+@code {
+
+    private ListView<DeviceComponent>? listView;
+
+    public async Task Create()
+    {
+        var result = await DeviceComponentsManager.AddAsync();
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            await listView!.LoadAsync();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    public async Task Edit(DeviceComponent component)
+    {
+        var result = await DeviceComponentsManager.EditAsync(component);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            await listView!.LoadAsync();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    public async Task EditNote(DeviceComponent component)
+    {
+        var result = await DeviceComponentsManager.EditNoteAsync(component);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    public async Task Delete(int id)
+    {
+        var result = await DeviceComponentsManager.DeleteAsync(id);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            await listView!.LoadAsync();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+}

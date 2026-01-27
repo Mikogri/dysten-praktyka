@@ -1,0 +1,128 @@
+﻿@using DystenSoftwateManagment.Models
+@using MudBlazor
+
+<MudDialog Class="dialog-background"
+            ActionsClass="dialog-actions"
+            ContentClass="dialog-content"
+            TitleClass="dialog-header">
+
+    <TitleContent>
+        @MudDialog.Title
+
+        <button class="button-icon button-opacity">
+            <img src="/Assets/close.png" @onclick="Cancel" />
+        </button>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="5">
+            <InputField @bind-Value="@Name" Placeholder="Nazwa" Label="Nazwa urządzenia" />
+
+            <MudStack Spacing="4">
+                <span class="input-label">Dostępne platformy</span>
+                <MudSelect T="Platform"
+                           Placeholder="Platformy"
+                           @bind-SelectedValues="SelectedOptions"
+                           Variant="Variant.Text"
+                           MultiSelection="true"
+                           ToStringFunc="(p) => p.Name">
+
+                    @foreach (var option in Options)
+                    {
+                        <MudSelectItem Value="@option">@option.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudStack>
+
+            @if (!string.IsNullOrWhiteSpace(errorText))
+            {
+                <span class="error-text">@errorText</span>
+            }
+
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <button class="button-primary" @onclick="Submit" disabled="@isLoading">
+            @if (isLoading)
+            {
+                <div class="progress-bar">
+                    <MudProgressCircular Indeterminate="true"
+                                         Size="Size.Small"
+                                         Color="Color.Secondary" />
+                </div>
+            }
+            else
+            {
+                <span>@ButtonText</span>
+            }
+        </button>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public string Name { get; set; } = string.Empty;
+
+    [Parameter]
+    public string ButtonText { get; set; } = "Dodaj";
+
+    [Parameter]
+    public List<Platform> Options { get; set; } = new();
+
+    [Parameter]
+    public IEnumerable<Platform> SelectedOptions { get; set; } = new HashSet<Platform>();
+
+    [Parameter]
+    public Func<string, string, int, Task<string>> ValidationResult { get; set; }
+
+    private string errorText = string.Empty;
+    private string orginalName = string.Empty;
+
+    private bool isLoading = false;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        orginalName = Name;
+    }
+
+    private async Task Submit()
+    {
+        errorText = string.Empty;
+        isLoading = true;
+        await Task.Delay(10);
+
+        try
+        {
+            string result = string.Empty;
+
+            if (ValidationResult != null)
+            {
+                result = await ValidationResult(Name, orginalName, SelectedOptions?.Count() ?? 0);
+            }
+
+            if (string.IsNullOrEmpty(result))
+            {
+                MudDialog.Close(DialogResult.Ok(new Device
+                {
+                    Name = Name,
+                    Platforms = SelectedOptions.ToList()
+                }));
+            }
+            else
+            {
+                errorText = result;
+            }
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

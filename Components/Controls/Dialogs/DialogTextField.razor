@@ -1,0 +1,113 @@
+﻿@using MudBlazor
+@rendermode InteractiveServer
+
+<MudDialog Class="dialog-background"
+           ActionsClass="dialog-actions"
+           ContentClass="dialog-content"
+           TitleClass="dialog-header">
+
+    <TitleContent>
+        @MudDialog.Title
+
+        <button class="button-icon button-opacity">
+            <img src="/Assets/close.png" @onclick="Cancel" />
+        </button>
+    </TitleContent>
+
+    <DialogContent>
+
+        <MudStack Spacing="5">
+            <InputField @bind-Value="Text" Placeholder="@Placeholder" Label="@Label" IsPassword="@IsPassword" />
+
+            @if (!string.IsNullOrWhiteSpace(errorText))
+            {
+                <span class="error-text">@errorText</span>
+            }
+
+        </MudStack>
+
+    </DialogContent>
+    <DialogActions>
+        <button class="button-primary" @onclick="Submit" disabled="@isLoading">
+            @if (isLoading)
+            {
+                <div class="progress-bar">
+                    <MudProgressCircular Indeterminate="true"
+                                         Size="Size.Small"
+                                         Color="Color.Secondary" />
+                </div>
+            }
+            else
+            {
+                <span>@ButtonText</span>
+            }
+        </button>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public string Text { get; set; } = string.Empty;
+
+    [Parameter]
+    public string ButtonText { get; set; } = "Dodaj";
+
+    [Parameter]
+    public string Label { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Placeholder { get; set; } = "Nazwa";
+
+    [Parameter]
+    public bool IsPassword { get; set; }
+
+    [Parameter] 
+    public Func<string, string, Task<string>> ValidationResult { get; set; }
+
+    private string errorText = string.Empty;
+
+    private string orginalText = string.Empty;
+
+    private bool isLoading = false;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        orginalText = Text;
+    }
+
+    private async Task Submit()
+    {
+        errorText = string.Empty;
+        isLoading = true;
+        await Task.Delay(10);
+
+        try
+        {
+            string result = string.Empty;
+
+            if (ValidationResult != null)
+            {
+                result = await ValidationResult(Text, orginalText);
+            }
+
+            if (string.IsNullOrEmpty(result))
+            {
+                MudDialog.Close(DialogResult.Ok(Text));
+            }
+            else
+            {
+                errorText = result;
+            }
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

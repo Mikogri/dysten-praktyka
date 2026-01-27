@@ -1,0 +1,45 @@
+﻿<MudDialog Class="dialog-background"
+           ActionsClass="dialog-actions"
+           ContentClass="dialog-content"
+           TitleClass="dialog-header">
+
+    <TitleContent>
+        @MudDialog.Title
+
+        <button class="button-icon button-opacity">
+            <img src="/Assets/close.png" @onclick="Cancel" />
+        </button>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="5" Justify="Justify.Center" AlignItems="AlignItems.Center">
+            @if (!string.IsNullOrEmpty(IconPath))
+            {
+                <img src="@IconPath" width="60" height="60"/>
+            }
+
+            <MudText>@ContentText</MudText>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <button class="button-primary" @onclick="Submit">
+            @ButtonText
+        </button>
+    </DialogActions>
+</MudDialog>
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public string ContentText { get; set; } = string.Empty;
+
+    [Parameter]
+    public string ButtonText { get; set; } = "Kontynuuj";
+
+    [Parameter]
+    public string IconPath { get; set; }
+
+    private async Task Submit() => MudDialog.Close(DialogResult.Ok(true));
+
+    private void Cancel() => MudDialog.Cancel();
+}

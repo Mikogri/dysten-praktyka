@@ -1,0 +1,88 @@
+﻿a {
+    color: var(--font-255);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-family: var(--font-normal);
+}
+
+    a:hover {
+        text-decoration: underline;
+    }
+
+.card-item {
+    cursor: pointer;
+    display: flex;
+    background-color: var(--panel);
+    border: solid 1px var(--border);
+    border-radius: 7.5px;
+    padding: 20px;
+    min-width: 300px;
+    max-width: 500px;
+    width: 100%;
+    box-sizing: border-box;
+    height: 140px;
+    justify-content: space-between;
+    transition: 0.2s;
+}
+
+    .card-item:hover {
+        background-color: var(--hover);
+    }
+
+    .card-item:active {
+        background-color: var(--pressed);
+    }
+
+.card-item-start {
+    display: flex;
+    gap: 20px;
+    width: calc(100% - 75px);
+}
+
+.card-item-header {
+    display: inline-block;
+    font-size: 1.125rem;
+    font-weight: 500;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.card-item-text {
+    display: inline-block;
+    flex-direction: column;
+    white-space: nowrap;
+    gap: 10px;
+    width: 100%;
+}
+
+.card-item-inner-text, .card-item-inner-text p {
+    max-width: 100%;
+    font-size: 0.75rem;
+    color: var(--font-125);
+}
+
+    .card-item-inner-text p {
+        margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 175px;
+    }
+
+.arrow-img {
+    opacity: 0.5;
+    width: 15px;
+    height: 15px;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    transform: translateX(0);
+}
+
+.card-item:hover .arrow-img {
+    opacity: 1;
+    transform: translateX(3px);
+}
+
+p {
+    font-family: var(--font-normal) !important;
+}

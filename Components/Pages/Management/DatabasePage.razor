@@ -1,0 +1,194 @@
+﻿@page "/managedatabase"
+@attribute [Authorize(Roles = "Admin")]
+@using DystenSoftwateManagment.Components.Controls.Dialogs
+@using DystenSoftwateManagment.Components.Controls.List
+@using Microsoft.AspNetCore.Authorization
+@using DystenSoftwateManagment.Data
+@using DystenSoftwateManagment.Managers
+@using DystenSoftwateManagment.Utility
+@using DystenSoftwateManagment.Models
+@using DystenSoftwateManagment.Components.Controls
+@using Microsoft.EntityFrameworkCore
+@using MudBlazor
+@rendermode InteractiveServer
+@inject NavigationManager Navigation
+@inject DataBaseManager DataBaseManager
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IJSRuntime JS
+
+<PageTitle>Baza danych</PageTitle>
+
+<ListView @ref="listView"
+          TItem="FileInfo"
+          LoadItemsFunc="DataBaseManager.GetBackupFilesAsync"
+          Title="Lista Użytkowników"
+          IconSrc="/Assets/database.png"
+          GetName="item => item.Name">
+
+    <TableColumns>
+        <col />
+        <col />
+        <col />
+        <col />
+    </TableColumns>
+
+    <TableHeaders>
+        <MudTh>Nazwa</MudTh>
+        <MudTh>Data utworzenia</MudTh>
+        <MudTh>Zapis</MudTh>
+        <MudTh>Rozmiar</MudTh>
+    </TableHeaders>
+
+    <RowTemplate Context="item">
+        <MudTd>@Utilities.AdjustDbFileName(item)</MudTd>
+        <MudTd>@item.CreationTime</MudTd>
+        <MudTd>
+            @(Utilities.IsDbSaveManual(item.Name) ? "manualny" : "automatyczny")
+        </MudTd>
+        <MudTd>@(item.Exists? Utilities.ConvertBytes(item.Length) : "Brak pliku")</MudTd>
+    </RowTemplate>
+
+    <ItemActionsMenu Context="item">
+        <button class="context-menu-item" @onclick="() => RestoreDbFromBackup(item)">
+            <img src="/Assets/databaseimport.png" />
+            Zastosuj kopie zapasową
+        </button>
+        <a class="context-menu-item context-menu-item-a" href="/export-db/@item.Name" download="@item.Name" target="_blank">
+            <img src="/Assets/databaseexport.png" width="15" height="15" />
+            Eksportuj kopie zapasową
+        </a>
+        <button class="context-menu-item" @onclick="() => Delete(item)">
+            <img src="/Assets/delete.png" />
+            Usuń kopie zapasową
+        </button>
+    </ItemActionsMenu>
+
+    <ActionsContent>
+        <ContextMenuButton ContextMenuClass="context-menu"
+                           AnchorOrigin="Origin.BottomRight"
+                           TransformOrigin="Origin.TopRight">
+
+            <Activator>
+                <button class="button-icon-outlined btn-action">
+                    <img src="/Assets/more.png" />
+                </button>
+            </Activator>
+            <MenuContent>
+                <a class="context-menu-item context-menu-item-a" href="/export-db" target="_blank">
+                    <img src="/Assets/databaseexport.png" width="15" height="15" />
+                    Eksportuj baze danych
+                </a>
+                <button class="context-menu-item" @onclick="() => ImportDatabase()">
+                    <img src="/Assets/databaseimport.png" />
+                    Importuj baze danych
+                </button>
+                <button class="context-menu-item" @onclick="() => CreateDbBackup()">
+                    <img src="/Assets/dbbackup.png" />
+                    Rozpocznij kopie zapasową
+                </button>
+            </MenuContent>
+        </ContextMenuButton>
+    </ActionsContent>
+
+</ListView>
+
+
+@code {
+
+    private ListView<FileInfo>? listView;
+
+    private async Task ImportDatabase()
+    {
+        var dialog = await DialogService.ShowAsync<DialogImportDb>("Importuj bazę danych");
+        var result = await dialog.Result;
+
+        if (!result!.Canceled && result.Data is bool r)
+        {
+            if (r)
+            {
+                var parameters = new DialogParameters<DialogInfo>
+                {
+                    { x => x.ContentText, "Skutecznie zaimportowano baze danych" },
+                    { x => x.IconPath, "Assets/check.png" },
+                };
+
+                var d = await DialogService.ShowAsync<DialogInfo>("Sukces", parameters);
+                await d.Result;
+
+                Navigation.NavigateTo("/account/logout", forceLoad: true);
+            }
+            else
+            {
+                Snackbar.Add("Błąd podczas próby importu bazy danych", Severity.Error);
+            }
+        }
+    }
+
+    private async Task RestoreDbFromBackup(FileInfo file)
+    {
+        var parameters = new DialogParameters<DialogConfirm>
+        {
+            { x => x.ContentText, "Zasotoswanie tej bazy danych oznacza nadpisanie wszystkich obenych danych! Upewnij się że masz kopie zapasową." },
+            { x => x.ButtonText, "Potwierdź" },
+        };
+
+        var dialog = await DialogService.ShowAsync<DialogConfirm>("Zasotuj baze danych", parameters);
+        var dialogResult = await dialog.Result;
+
+        if (!dialogResult!.Canceled)
+        {
+            var result = await DataBaseManager.RestoreFromDbBackupAsync(file);
+
+            if (result.OperationStatus == OperationResult.Success)
+            {
+                var p = new DialogParameters<DialogInfo>
+                {
+                    { x => x.ContentText, "Skutecznie zastosowano baze danych" },
+                    { x => x.IconPath, "Assets/check.png" },
+                };
+
+                var d = await DialogService.ShowAsync<DialogInfo>("Sukces", p);
+                await d.Result;
+
+                Navigation.NavigateTo("/account/logout", forceLoad: true);
+            }
+
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }        
+    }
+
+    public async Task Delete(FileInfo file)
+    {
+        var parameters = new DialogParameters<DialogConfirm>
+        {
+            { x => x.ContentText, "Czy napewno chcesz trwale usunąć tą kopie zapasową?" },
+            { x => x.ButtonText, "Usuń" },
+        };
+
+        var dialog = await DialogService.ShowAsync<DialogConfirm>("Usuń kopie", parameters);
+        var dialogResult = await dialog.Result;
+
+        if (!dialogResult!.Canceled)
+        {
+            var result = await DataBaseManager.DeleteBackupFileAsync(file);
+
+            if (result.OperationStatus != OperationResult.Canceled)
+            {
+                if (result.OperationStatus == OperationResult.Success)
+                {
+                    await listView!.LoadAsync();
+                }
+
+                Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+            }
+        }
+    }
+
+    private async Task CreateDbBackup()
+    {
+        await Task.Run(() => DataBaseManager.CreateManualBackup());
+        await listView!.LoadAsync();
+    }
+}

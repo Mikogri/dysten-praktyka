@@ -1,0 +1,148 @@
+﻿@using DystenSoftwateManagment.Components.Controls.List
+@using Microsoft.AspNetCore.Authorization
+@using DystenSoftwateManagment.Data
+@using DystenSoftwateManagment.Models
+@using DystenSoftwateManagment.Utility
+@using DystenSoftwateManagment.Managers
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using Microsoft.EntityFrameworkCore
+@using DystenSoftwateManagment.Components.Controls
+@using MudBlazor
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject DevicesManager DevicesManager
+@rendermode InteractiveServer
+
+<ListView @ref="listView" 
+          TItem="Device"
+          IconSrc="/Assets/device.png"
+          GetName="item => item.Name"
+          OnCardClick="GoDetails"
+          DisplayCardContextMenu="false"
+          LoadItemsFunc="() => DevicesManager.GetAllForProjectAsync(ProjectId)">
+
+    <TableColumns>
+        <col />
+        <col />
+        <col />
+    </TableColumns>
+
+    <TableHeaders>
+        <MudTh>Nazwa</MudTh>
+        <MudTh>Platformy</MudTh>
+        <MudTh>Data modefikacji</MudTh>
+    </TableHeaders>
+
+    <RowTemplate Context="item">
+        <MudTd>
+            <a href="/projects/@ProjectId/devices/@item.Id">
+                @item.Name
+            </a>
+        </MudTd>
+        <MudTd>
+            <p>@string.Join(", ", item.Platforms.Select(p => p.Name))</p>
+        </MudTd>
+        <MudTd>@item.ModificationDate</MudTd>
+    </RowTemplate>
+
+    <ItemActionsMenu Context="item">
+        <button class="context-menu-item" @onclick="() => Edit(item)">
+            <img src="/Assets/edit.png" />
+            Edytuj urządzenie
+        </button>
+        <button class="context-menu-item" @onclick="() => EditNote(item)">
+            <img src="/Assets/note.png" />
+            Otwórz notatkę
+        </button>
+        <button class="context-menu-item" @onclick="() => Delete(item.Id)">
+            <img src="/Assets/delete.png" />
+            Usuń urządzenie
+        </button>
+    </ItemActionsMenu>
+
+    <ActionsContent>
+        <button class="button-add" @onclick="Select">
+            <img src="/Assets/grid.png" width="15" height="15" />
+            Wybierz urządzenia
+        </button>
+        <button class="button-add" @onclick="Create">
+            <img src="/Assets/plus.png" width="15" height="15" />
+            Nowe urządzenie
+        </button>
+    </ActionsContent>
+
+    <CardInnerContent Context="item">
+        Modefikowano: @item.ModificationDate.ToString("yyyy-MM-dd")
+        <p>@string.Join(", ", item.Platforms.Select(p => p.Name))</p>
+    </CardInnerContent>
+
+</ListView>
+
+@code {
+
+    [Parameter] 
+    public int ProjectId { get; set; }
+
+    private ListView<Device>? listView;
+
+    public async Task Select()
+    {
+        var result = await DevicesManager.SelectForDeviceAsync(ProjectId);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            await listView!.LoadAsync();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    public async Task Create()
+    {
+        var result = await DevicesManager.AddAsync(ProjectId);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            await listView!.LoadAsync();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    public async Task EditNote(Device device)
+    {
+        var result = await DevicesManager.EditNoteAsync(device);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    private async Task Edit(Device device)
+    {
+        var result = await DevicesManager.EditAsync(device);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            await listView!.LoadAsync();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    private async Task Delete(int id)
+    {
+        var result = await DevicesManager.DeleteAsync(id);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            await listView!.LoadAsync();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    public void GoDetails(Device item)
+    {
+        Navigation.NavigateTo($"/projects/{ProjectId}/devices/{item.Id}");
+    }
+}

@@ -1,0 +1,79 @@
+﻿@using DystenSoftwateManagment.Managers
+@using DystenSoftwateManagment.Models
+@using Microsoft.AspNetCore.Components.Authorization
+@inject ProjectsManager ProjectsManager
+@inject NavigationManager Navigation
+
+<div class="menu-container">
+    <div class="menu-content">
+        <div class="section-header">
+            <span>Menu Główne</span>
+        </div>
+        <div class="section-content">
+            <MudTooltip Class="tooltip" Text="Projekty" Placement="Placement.Right" Duration="0" Delay="0">
+                <div class="nav-item">
+                    <NavLink href="/projects" class="nav-item" Match="NavLinkMatch.Prefix">
+                        <img src="/Assets/grid.png"> <span>Lista Projektów</span>
+                    </NavLink>
+                </div>
+            </MudTooltip>
+            <AuthorizeView Roles="Admin">
+                <Authorized>
+                    <MudTooltip Class="tooltip" Text="Użytkownicy" Placement="Placement.Right" Duration="0" Delay="0">
+                        <div class="nav-item">
+                            <NavLink href="manageusers" class="nav-item" Match="NavLinkMatch.Prefix">
+                                <img src="/Assets/user.png"> <span>Użytkownicy</span>
+                            </NavLink>
+                        </div>
+                    </MudTooltip>
+                    <MudTooltip Class="tooltip" Text="Baza Danych" Placement="Placement.Right" Duration="0" Delay="0">
+                        <div class="nav-item">
+                            <NavLink href="managedatabase" class="nav-item" Match="NavLinkMatch.Prefix">
+                                <img src="/Assets/database.png">
+                                <span>Baza Danych</span>
+                            </NavLink>
+                        </div>
+                    </MudTooltip>
+                </Authorized>
+            </AuthorizeView>
+        </div>
+
+        <div class="section-header">
+            <span>Zasoby</span>
+        </div>
+        <div class="section-content">
+            <MudTooltip Class="tooltip" Text="Platformy" Placement="Placement.Right" Duration="0" Delay="0">
+                <div class="nav-item">
+                    <NavLink href="manageplatforms" class="nav-item" Match="NavLinkMatch.Prefix">
+                        <img src="/Assets/platform.png">
+                        <span>Platformy</span>
+                    </NavLink>
+                </div>
+            </MudTooltip>
+            <MudTooltip Class="tooltip" Text="Typy Softu" Placement="Placement.Right" Duration="0" Delay="0">
+                <div class="nav-item">
+                    <NavLink href="managesoftwaretypes" class="nav-item" Match="NavLinkMatch.Prefix">
+                        <img src="/Assets/softtype.png">
+                        <span>Typy Softu</span>
+                    </NavLink>
+                </div>
+            </MudTooltip>
+            <MudTooltip Class="tooltip" Text="Protokoły RS" Placement="Placement.Right" Duration="0" Delay="0">
+                <div class="nav-item">
+                    <NavLink href="rs-protocols" class="nav-item" Match="NavLinkMatch.Prefix">
+                        <img src="/Assets/rsprotocol.png">
+                        <span>Protokoły RS</span>
+                    </NavLink>
+                </div>
+            </MudTooltip>
+            <MudTooltip Class="tooltip" Text="Komponenty" Placement="Placement.Right" Duration="0" Delay="0">
+                <div class="nav-item">
+                    <NavLink href="components" class="nav-item" Match="NavLinkMatch.Prefix">
+                        <img src="/Assets/cube.png">
+                        <span>Komponenty</span>
+                    </NavLink>
+                </div>
+            </MudTooltip>
+        </div>
+    </div>
+</div>

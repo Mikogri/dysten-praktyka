@@ -1,0 +1,73 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@typeparam TItem
+
+@if (DisplayCardContextMenu)
+{
+    <div class="card-item">
+        <div class="card-item-start">
+            <img src="@IconSrc" width="25" height="25" class="opacity-img" />
+            <div class="card-item-text">
+                <span class="card-item-header" title="@Title">
+                    @(Title ?? "---")
+                </span>
+                <div class="card-item-inner-text">
+                    @InnerContent
+                </div>
+            </div>
+        </div>
+        <MudSpacer />
+        <AuthorizeView Roles="Developer">
+            <Authorized>
+                <ContextMenuButton ContextMenuClass="context-menu">
+                    <Activator>
+                        <button class="button-icon">
+                            <img src="/Assets/more.png" />
+                        </button>
+                    </Activator>
+                    <MenuContent>
+                        @ContextMenuContent
+                    </MenuContent>
+                </ContextMenuButton>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+}
+else
+{
+    <div class="card-item-arrow" @onclick="OnCardClick">
+        <div class="card-item-start">
+            <img src="@IconSrc" width="25" height="25" class="opacity-img" />
+            <div class="card-item-text">
+                <span class="card-item-header" title="@Title">
+                    @(Title ?? "---")
+                </span>
+                <div class="card-item-inner-text">
+                    @InnerContent
+                </div>
+            </div>
+        </div>
+        <MudSpacer/>
+        <img src="/Assets/arrow.png" class="arrow-img" />
+    </div>
+}
+
+@code {
+
+    [Parameter, EditorRequired]
+    public string IconSrc { get; set; }
+
+    [Parameter]
+    public RenderFragment? InnerContent { get; set; }
+
+    [Parameter, EditorRequired]
+    public string? Title { get; set; }
+
+    [Parameter, EditorRequired]
+    public RenderFragment ContextMenuContent { get; set; }
+
+    [Parameter]
+    public EventCallback OnCardClick { get; set; }
+
+    [Parameter]
+    public bool DisplayCardContextMenu { get; set; } = true;
+}

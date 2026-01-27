@@ -1,0 +1,153 @@
+﻿@using DystenSoftwateManagment.Models
+@using MudBlazor
+
+<MudDialog Class="dialog-background"
+           ActionsClass="dialog-actions"
+           ContentClass="dialog-content"
+           TitleClass="dialog-header">
+
+    <TitleContent>
+        @MudDialog.Title
+
+        <button class="button-icon button-opacity">
+            <img src="/Assets/close.png" @onclick="Cancel" />
+        </button>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="5">
+            <InputField @bind-Value="Name" Placeholder="Nazwa" Label="Nazwa oprogramowania" />
+
+            <MudStack Spacing="4">
+                <span class="input-label">Typ oprogramowania</span>
+                <MudSelect T="SoftwareType"
+                           Placeholder="Typ softu"
+                           @bind-Value="SoftwareType"
+                           Variant="Variant.Text"
+                           ToStringFunc="type => type?.Name ?? string.Empty"
+                           RequiredError="To pole jest wymagane">
+
+                    @foreach (var option in OptionsSoftwareTypes)
+                    {
+                        <MudSelectItem Value="@option">@option.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudStack>
+
+            <MudStack Spacing="4">
+                <span class="input-label">
+                    Protokół RS
+                    <button class="button-icon" @onclick="() => ProtocolRS = null">
+                        <img src="/Assets/close.png" style="width: 10px; height: 10px;"/>
+                    </button>
+                </span>
+                <MudSelect T="ProtocolRS"
+                           Placeholder="Protokół RS"
+                           @bind-Value="ProtocolRS"
+                           Variant="Variant.Text"
+                           ToStringFunc="prtocol => prtocol?.Name ?? string.Empty">
+
+                    @foreach (var option in OptionsProtocolsRS)
+                    {
+                        <MudSelectItem Value="@option">@option.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudStack>
+
+            @if (!string.IsNullOrWhiteSpace(errorText))
+            {
+                <span class="error-text">@errorText</span>
+            }
+
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <button class="button-primary" @onclick="Submit" disabled="@isLoading">
+            @if (isLoading)
+            {
+                <div class="progress-bar">
+                    <MudProgressCircular Indeterminate="true"
+                                         Size="Size.Small"
+                                         Color="Color.Secondary" />
+                </div>
+            }
+            else
+            {
+                <span>@ButtonText</span>
+            }
+        </button>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public string Name { get; set; } = string.Empty;
+
+    [Parameter]
+    public string ButtonText { get; set; } = "Dodaj";
+
+    [Parameter]
+    public List<SoftwareType> OptionsSoftwareTypes { get; set; } = new();
+
+    [Parameter]
+    public List<ProtocolRS> OptionsProtocolsRS { get; set; } = new();
+
+    [Parameter]
+    public SoftwareType? SoftwareType { get; set; }
+
+    [Parameter]
+    public ProtocolRS? ProtocolRS { get; set; }
+
+    [Parameter]
+    public int DeviceId { get; set; }
+
+    [Parameter]
+    public Func<string, string, SoftwareType, SoftwareType, int, Task<string>> ValidationResult { get; set; }
+
+    private string errorText = string.Empty;
+    private string orginalName = string.Empty;
+    private SoftwareType orginalSf;
+    private bool isLoading = false;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        orginalName = Name;
+        orginalSf = SoftwareType!;
+    }
+
+    private async Task Submit()
+    {
+        errorText = string.Empty;
+        isLoading = true;
+        await Task.Delay(10);
+
+        try
+        {
+            string result = string.Empty;
+
+            if (ValidationResult != null)
+            {
+                result = await ValidationResult(Name, orginalName, SoftwareType!, orginalSf, DeviceId);
+            }
+
+            if (string.IsNullOrEmpty(result))
+            {
+                MudDialog.Close(DialogResult.Ok(new List<object?> { Name, SoftwareType, ProtocolRS }));
+            }
+            else
+            {
+                errorText = result;
+            }
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

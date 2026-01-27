@@ -1,0 +1,175 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@using DystenSoftwateManagment.Data
+@using DystenSoftwateManagment.Models
+@using DystenSoftwateManagment.Utility
+@using DystenSoftwateManagment.Managers
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using Microsoft.EntityFrameworkCore
+@using DystenSoftwateManagment.Components.Controls
+@using MudBlazor
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject DevicesManager DevicesManager
+@inject ProjectsManager ProjectsManager
+@inject IWebHostEnvironment Env
+@rendermode InteractiveServer
+@inject IJSRuntime JS
+
+@if (isLoading)
+{
+    <div class="loading-container">
+        <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Tertiary" />
+        <span>Ładowanie</span>
+    </div>
+}
+else if (!isLoading && Project is null)
+{
+    <div class="not-found">
+        <img src="/Assets/error.png" width="40" height="40" />
+        <div class="not-found-text">
+            <p>Nie znaleziono projektu</p>
+            <a href="/projects">Powrót do listy projektów</a>
+        </div>
+    </div>
+}
+else
+{
+    <div class="project-section">
+        <div class="actions">
+            <div class="header-desc">
+                <p>@Project!.Name</p>
+                <p>Szczegóły dotyczące tego projektu</p>
+            </div>
+            @if (isUpdating)
+            {
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Tertiary" />
+            }
+        </div>
+        <MudSpacer />
+        <div class="actions">
+            <AuthorizeView Roles="Developer" Context="auth">
+                <AuthorizeView>
+                    <ContextMenuButton ContextMenuClass="context-menu">
+                        <Activator>
+                            <button class="button-background-light">
+                                <img src="/Assets/more.png" />
+                                Opcje projektu
+                            </button>
+                        </Activator>
+                        <MenuContent>
+                            <button class="context-menu-item" @onclick="() => Edit()">
+                                <img src="/Assets/edit.png" />
+                                Edytuj projekt
+                            </button>
+                            <button class="context-menu-item" @onclick="() => EditNote()">
+                                <img src="/Assets/note.png" />
+                                Otwórz opis
+                            </button>
+                            <button class="context-menu-item" @onclick="() => Delete()">
+                                <img src="/Assets/delete.png" />
+                                Usuń projekt
+                            </button>
+                        </MenuContent>
+                    </ContextMenuButton>
+                </AuthorizeView>
+            </AuthorizeView>
+        </div>
+    </div>
+    <MudDivider />
+    <div class="project-section">
+        <div class="header-desc header-desc-space">
+            <p>Opis projektu</p>
+             <AuthorizeView Roles="Developer" Context="auth">
+                <AuthorizeView>
+                    <button class="button-background-light" @onclick="() => EditNote()">
+                        <img src="/Assets/edit.png" />
+                        Edytuj opis projektu
+                    </button>
+                </AuthorizeView>
+            </AuthorizeView>
+        </div>
+        <MudSpacer />
+        <div class="description">
+            @if (string.IsNullOrEmpty(Project.Description))
+            {
+                @("Brak opisu")
+            }
+            else
+            {
+                @Project.Description
+            }
+        </div>
+    </div>
+    <MudDivider />
+}
+
+@code {
+
+    [Parameter]
+    public int ProjectId { get; set; }
+
+    private string projectName = string.Empty;
+    private bool isGridView = true;
+    private bool isLoading = true;
+    private bool isUpdating = false;
+
+    private Project? Project;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Load();
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task Load()
+    {
+        isUpdating = true;
+        StateHasChanged();
+
+        Project = await ProjectsManager.GetAsync(ProjectId);
+
+        isUpdating = false;
+        StateHasChanged();
+    }
+
+    public async Task Edit()
+    {
+        var result = await ProjectsManager.EditAsync(Project!);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            await Load();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    public async Task EditNote()
+    {
+        var result = await ProjectsManager.EditNoteAsync(Project!);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    public async Task Delete()
+    {
+        var result = await ProjectsManager.DeleteAsync(Project!.Id);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            Navigation.NavigateTo("/projects");
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    private async Task GoBack() => await JS.InvokeVoidAsync("history.back");
+
+}

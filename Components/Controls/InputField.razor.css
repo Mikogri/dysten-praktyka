@@ -1,0 +1,22 @@
+﻿.input-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.input-field {
+    padding: 7.5px;
+    border: 1px solid var(--border);
+    background-color: var(--panel-light);
+    border-radius: 7.5px;
+    transition: 0.2s;
+    outline: none;
+}
+
+    .input-field::placeholder {
+        color: var(--font-125);
+    }
+
+    .input-field:focus {
+        border: 1px solid var(--border-sharp);
+    }

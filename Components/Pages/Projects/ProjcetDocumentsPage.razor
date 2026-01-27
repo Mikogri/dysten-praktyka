@@ -1,0 +1,121 @@
+﻿@using DystenSoftwateManagment.Components.Controls.List
+@using Microsoft.AspNetCore.Authorization
+@using DystenSoftwateManagment.Data
+@using DystenSoftwateManagment.Models
+@using DystenSoftwateManagment.Utility
+@using DystenSoftwateManagment.Managers
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using Microsoft.EntityFrameworkCore
+@using DystenSoftwateManagment.Components.Controls
+@using MudBlazor
+@rendermode InteractiveServer
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject ProjectDocumentsManager ProjectDocumentsManager
+@inject IJSRuntime JS
+
+<ListView @ref="listView" 
+          TItem="ProjectDocument"
+          IconSrc="/Assets/document.png"
+          GetName="item => item.Name"
+          LoadItemsFunc="() => ProjectDocumentsManager.GetAllAsync(ProjectId)">
+
+    <TableColumns>
+        <col />
+        <col />
+        <col />
+    </TableColumns>
+
+    <TableHeaders>
+        <MudTh>Nazwa</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh>Rozmiar pliku</MudTh>
+    </TableHeaders>
+
+    <RowTemplate Context="item">
+        <MudTd>
+            @item.Name
+        </MudTd>
+        <MudTd>
+            <div class="status-container">
+                @(item.IsActive ? "aktywny" : "nie aktywny")
+                <div class="status-dot @item.IsActive" />
+            </div>
+        </MudTd>
+        <MudTd>@Utilities.ByteToMb(item.FileLength)</MudTd>
+    </RowTemplate>
+
+    <ItemActionsMenu Context="item">
+        <button class="context-menu-item" @onclick="() => Edit(item)">
+            <img src="/Assets/edit.png" />
+            Edytuj dokument
+        </button>
+        <a class="context-menu-item context-menu-item-a" href="/download/document/@item.Id" download="@item.FileName">
+            <img src="/Assets/downloadcloud.png" width="15" height="15" />
+            Pobierz plik
+        </a>
+        <button class="context-menu-item" @onclick="() => Delete(item.Id)">
+            <img src="/Assets/delete.png" />
+            Usuń dokument
+        </button>
+    </ItemActionsMenu>
+
+    <ActionsContent>
+        <button class="button-add" @onclick="Create">
+            <img src="/Assets/plus.png" width="15" height="15" />
+            Dodaj dokument
+        </button>
+    </ActionsContent>
+
+    <CardInnerContent Context="item">
+        <div class="status-container">
+            @($"Status: {(item.IsActive ? "aktywny" : "nie aktywny")}")
+            <div class="status-dot @item.IsActive" />
+        </div>
+        @Utilities.ByteToMb(item.FileLength)
+    </CardInnerContent>
+
+</ListView>
+
+@code {
+
+    [Parameter]
+    public int ProjectId { get; set; }
+
+    private ListView<ProjectDocument>? listView;
+
+    public async Task Create()
+    {
+        var result = await ProjectDocumentsManager.AddAsync(ProjectId);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            await listView!.LoadAsync();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    private async Task Edit(ProjectDocument doucment)
+    {
+        var result = await ProjectDocumentsManager.EditAsync(doucment);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            await listView!.LoadAsync();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    private async Task Delete(int id)
+    {
+        var result = await ProjectDocumentsManager.DeleteAsync(id);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            await listView!.LoadAsync();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+}

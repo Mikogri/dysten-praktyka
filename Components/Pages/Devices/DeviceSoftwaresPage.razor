@@ -1,0 +1,226 @@
+﻿@using DystenSoftwateManagment.Components.Controls.List
+@using DystenSoftwateManagment.Managers
+@using DystenSoftwateManagment.Utility
+@using Microsoft.AspNetCore.Authorization
+@using DystenSoftwateManagment.Data
+@using DystenSoftwateManagment.Models
+@using DystenSoftwateManagment.Components.Controls
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using MudBlazor
+@rendermode InteractiveServer
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject NavigationManager Navigation
+@inject DevicesManager DevicesManager
+@inject DevicesSoftwaresManager DevicesSoftwaresManager
+@inject SoftwaresPlatformsManager SoftwaresPlatformsManager
+@inject PlatformsManager PlatformsManager
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+
+<ListView @ref="listView"
+          TItem="DeviceSoftware"
+          IconSrc="/Assets/software.png"
+          GetName="item => item.Name"
+          LoadItemsFunc="() => Load()">
+
+    <TableColumns>
+        <col />
+        <col />
+        <col />
+        @foreach (var platform in device?.Platforms ?? [])
+        {
+            <col />
+        }
+    </TableColumns>
+
+    <TableHeaders>
+        <MudTh>Nazwa</MudTh>
+        <MudTh>Typ softu</MudTh>
+        <MudTh>Protokół RS</MudTh>
+        @foreach (var platform in device?.Platforms ?? [])
+        {
+            <MudTh>@platform.Name</MudTh>
+        }
+    </TableHeaders>
+
+    <RowTemplate Context="item">
+        <MudTd>@item.Name</MudTd>
+        <MudTd>@item.SoftwareType.Name</MudTd>
+        <MudTd>
+            <div class="status-container">
+
+                @if (item.ProtocolRS is not null)
+                {
+                    <div class="status-dot @item.ProtocolRS.IsActive" />
+                    @(item.ProtocolRS.Name)
+                }
+                else
+                {
+                    <p>---</p>
+                }
+            </div>
+        </MudTd>
+        @foreach (var platform in device?.Platforms ?? [])
+        {
+            <MudTd>
+                @{
+                    var matching = item.SoftwarePlatforms
+                    .OrderByDescending((s) => s.IsActive)
+                    .ThenByDescending((s) => s.ModificationDate)
+                    .FirstOrDefault(sp => sp.PlatformId == platform.Id);
+
+                    if (matching != null)
+                    {
+                        <div class="platform-version">
+
+                            <div class="platform-version-data">
+                                <a href="/software/@item.Id/platform/@platform.Id">
+                                    @($"{matching.Name}")
+                                </a>
+                                <p>
+                                    @matching.ModificationDate.ToString("yyyy-MM-dd")
+                                </p>
+                            </div>
+
+                            <a class="a-download"
+                               href="/download/@matching.Id"
+                               download="@matching.FileName"
+                               target="_blank">
+
+                                <img src="/Assets/download.png" />
+                            </a>
+
+                        </div>
+                    }
+                    else
+                    {
+                        <AuthorizeView Roles="Developer" Context="auth">
+                            <Authorized>
+                                <button class="button-icon button-opacity" @onclick="() => GoPlatformDetails(item.Id, platform.Id)">
+                                    <img src="/Assets/plus.png" />
+                                </button>
+                            </Authorized>
+                        </AuthorizeView>
+                        <AuthorizeView Roles="User" Context="auth">
+                            <Authorized>
+                                <MudText>--</MudText>
+                            </Authorized>
+                        </AuthorizeView>
+                    }
+                }
+            </MudTd>
+        }
+    </RowTemplate>
+
+    <ItemActionsMenu Context="item">
+        <button class="context-menu-item" @onclick="() => EditSoftware(item)">
+            <img src="/Assets/edit.png" />
+            Edytuj oprogramowanie
+        </button>
+        <button class="context-menu-item" @onclick="() => CreateMultiPlatforms(item.Id)">
+            <img src="/Assets/plus.png" />
+            Dodaj oprogramowanie
+        </button>
+        <button class="context-menu-item" @onclick="() => DeleteSoftware(item)">
+            <img src="/Assets/delete.png" />
+            Usuń oprogramowanie
+        </button>
+    </ItemActionsMenu>
+
+    <ActionsContent>
+        <button class="button-add" @onclick="CreateSoftware">
+            <img src="/Assets/plus.png" />
+            Nowe oprogramowanie
+        </button>
+    </ActionsContent>
+
+</ListView>
+
+@if (_openMultiPlatforms)
+{
+    <FormCreateMultiPlatforms DeviceId="@DeviceId" ReloadAction="Load" SoftwareId="@editingDeviceSoftwareId" OnResult="CreateMultiPlatformsHandleResult" />
+}
+
+@code {
+
+    [Parameter] 
+    public int DeviceId { get; set; }
+
+    private ListView<DeviceSoftware>? listView;
+
+    private Device? device;
+    private List<DeviceSoftware> devicesSoftwares = new();
+
+    private List<Platform> allPlatforms = new();
+
+    bool _openMultiPlatforms = false;
+    int editingDeviceSoftwareId;
+
+    private async Task<List<DeviceSoftware>> Load()
+    {
+        allPlatforms = await PlatformsManager.GetAllAsync();
+        device = await DevicesManager.GetAsync(DeviceId);
+
+        return device?.Softwares ?? [];
+    }
+
+    public async Task CreateSoftware()
+    {
+        var result = await DevicesSoftwaresManager.AddAsync(DeviceId);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            await listView!.LoadAsync();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    public async Task EditSoftware(DeviceSoftware deviceSoftware)
+    {
+        var result = await DevicesSoftwaresManager.EditAsync(deviceSoftware);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            await listView!.LoadAsync();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    public async Task DeleteSoftware(DeviceSoftware deviceSoftware)
+    {
+        var result = await DevicesSoftwaresManager.DeleteAsync(deviceSoftware.Id);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            await listView!.LoadAsync();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    public void GoPlatformDetails(int softwareId, int platformId)
+    {
+        Navigation.NavigateTo($"/software/{softwareId}/platform/{platformId}");
+    }
+
+    public void CreateMultiPlatforms(int deviceSoftwareId)
+    {
+        editingDeviceSoftwareId = deviceSoftwareId;
+        _openMultiPlatforms = true;
+    }
+
+    private async Task CreateMultiPlatformsHandleResult()
+    {
+        _openMultiPlatforms = false;
+
+        device = await DevicesManager.GetAsync(DeviceId);
+
+        if (listView != null)
+        {
+            await listView.LoadAsync();
+        }
+
+        StateHasChanged();
+    }
+}

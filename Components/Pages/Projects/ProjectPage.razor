@@ -1,0 +1,74 @@
+﻿@page "/projects/{ProjectId:int}"
+@attribute [Authorize]
+@using DystenSoftwateManagment.Components.Pages.Devices
+@using Microsoft.AspNetCore.Authorization
+@using DystenSoftwateManagment.Data
+@using DystenSoftwateManagment.Models
+@using DystenSoftwateManagment.Utility
+@using DystenSoftwateManagment.Managers
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using Microsoft.EntityFrameworkCore
+@using DystenSoftwateManagment.Components.Controls
+@using MudBlazor
+@inject IDbContextFactory<AppDbContext> DbFactory
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject DevicesManager DevicesManager
+@inject ProjectsManager ProjectsManager
+@inject IWebHostEnvironment Env
+@rendermode InteractiveServer
+@inject IJSRuntime JS
+
+<PageTitle>Projekt</PageTitle>
+
+<div class="header">
+    <button class="btn-go-back button-opacity" @onclick="GoBack">
+        <img src="/Assets/goBack.png" />
+    </button>
+
+    <div class="header-title">
+        <span>Szczegóły Projektu</span>
+        @if (!string.IsNullOrWhiteSpace(title))
+        {
+            <span class="separator">/</span>
+            <span>@title</span>
+        }
+    </div>
+</div>
+<MudTabs Elevation="0" SliderAnimation="false" KeepPanelsAlive>
+    <MudTabPanel Text="Szczegóły projektu" OnClick="() => SetTitle(string.Empty)">
+        <div class="fade-in-container">
+            <ProjectDetailsPageContent ProjectId="ProjectId" />
+        </div>
+    </MudTabPanel>
+    <MudTabPanel Text="Urządzenia" OnClick="@(() => SetTitle("Urządzenia"))">
+        <div class="tabs-content">
+            <DevicesListPage ProjectId="ProjectId" />
+        </div>
+    </MudTabPanel>
+    <MudTabPanel Text="Dokumenty" OnClick="@(() => SetTitle("Dokumenty"))">
+        <div class="tabs-content">
+            <ProjcetDocumentsPage ProjectId="ProjectId" />
+        </div>
+    </MudTabPanel>
+</MudTabs>
+
+@code {
+
+    [Parameter] 
+    public int ProjectId { get; set; }
+
+    private string projectName = string.Empty;
+    private string title = string.Empty;
+
+    private async Task SetTitle(string? value)
+    {
+        if (value is not null)
+        {
+            title = value;
+        }
+    }
+
+    private async Task GoBack() => await JS.InvokeVoidAsync("history.back");
+}

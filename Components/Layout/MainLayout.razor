@@ -1,0 +1,75 @@
+﻿@using MudBlazor
+@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="@Theme" IsDarkMode="true"/>
+
+<MudPopoverProvider />
+<MudSnackbarProvider />
+
+<MudDialogProvider FullWidth="true"
+                   MaxWidth="MaxWidth.ExtraSmall"
+                   Position="DialogPosition.Center"
+                   CloseOnEscapeKey="true" />
+
+<div class="page">
+    <AppBar />
+    <div class="main-view">
+        <Menu />
+        <div class="page-content">
+            <div class="content">
+                <div class="page-container">
+                    @Body
+                    <div style="height: 1px; flex-shrink: 0; visibility: hidden;"/>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    MudTheme Theme = new MudTheme()
+    {
+        PaletteDark = new()
+        {
+            Background = "#141414",
+            Primary = "#004278",
+            PrimaryDarken = "#FC4C02",
+            PrimaryLighten = "#FC4C02",
+            Secondary = "#007846",
+            SecondaryDarken = "#323232",
+            SecondaryLighten = "#323232",
+            Dark = "#1C1C1C",
+            DarkDarken = "#1A1A1A",
+            DarkLighten = "#1C1C1D",
+            TableLines = "#323232",
+            Surface = "#1A1A1A",
+            Tertiary = "#969696",
+            TableStriped = "#00000000",
+            TextPrimary = "#FFFFFF",
+            TextSecondary = "#7D7D7D",
+            Success = "#006239",
+            Error = "#4B1919",
+            RippleOpacity = 0,
+            RippleOpacitySecondary = 0,
+            HoverOpacity = 0,
+        },
+
+        LayoutProperties = new()
+        {
+            DefaultBorderRadius = "5px",
+        },
+    };
+
+    private SnackbarConfiguration _snackbarConfig = new()
+    {
+        VisibleStateDuration = 5000,
+
+        ShowTransitionDuration = 200,
+        HideTransitionDuration = 200,
+
+        MaximumOpacity = 1,
+        PreventDuplicates = false,
+        PositionClass = Defaults.Classes.Position.TopCenter
+    };
+}

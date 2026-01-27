@@ -1,0 +1,33 @@
+﻿<div class="search-input-wrapper">
+    <img src="/Assets/search.png" alt="Szukaj" class="search-icon" />
+    <input class="search-input"
+           type="text"
+           placeholder="@Placeholder"
+           @bind="Value"
+           @bind:event="oninput" />
+</div>
+
+@code {
+
+	private string _value;
+
+	[Parameter]
+	public string Value
+	{
+		get => _value;
+		set
+		{
+			if (_value != value)
+			{
+				_value = value;
+				ValueChanged.InvokeAsync(value);
+			}
+		}
+	}
+
+    [Parameter]
+    public EventCallback<string> ValueChanged { get; set; }
+
+    [Parameter]
+    public string Placeholder { get; set; } = "Szukaj...";
+}

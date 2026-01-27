@@ -1,0 +1,39 @@
+﻿<div class="input-wrapper">
+    <span class="input-label">@Label</span>
+	<input class="input-field"
+		   type="@(IsPassword ? "password" : "text")"
+		   placeholder="@Placeholder"
+		   @bind="Value"
+		   @bind:event="oninput" />
+</div>
+
+@code {
+
+	private string _value;
+
+	[Parameter]
+	public string Value
+	{
+		get => _value;
+		set
+		{
+			if (_value != value)
+			{
+				_value = value;
+				ValueChanged.InvokeAsync(value);
+			}
+		}
+	}
+
+	[Parameter]
+	public EventCallback<string> ValueChanged { get; set; }
+
+	[Parameter]
+	public string Placeholder { get; set; } = string.Empty;
+
+	[Parameter]
+	public string Label { get; set; } = "Label";
+
+	[Parameter]
+	public bool IsPassword { get; set; } = false;
+}

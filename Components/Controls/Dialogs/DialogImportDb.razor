@@ -1,0 +1,201 @@
+﻿@using DystenSoftwateManagment.Managers
+@using DystenSoftwateManagment.Models
+@using DystenSoftwateManagment.Utility
+@using MudBlazor
+@using System.IO.Compression
+@inject IWebHostEnvironment Env
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject DataBaseManager DataBaseManager
+
+<MudDialog Class="dialog-background"
+           ActionsClass="dialog-actions"
+           ContentClass="dialog-content"
+           TitleClass="dialog-header"
+           OnBackdropClick="Cancel">
+
+    <TitleContent>
+        @MudDialog.Title
+
+        <button class="button-icon button-opacity" @onclick="Cancel">
+            <img src="/Assets/close.png"/>
+        </button>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="5">
+            <MudStack Spacing="4">
+                <span class="input-label">Wybierz plik bazy</span>
+                <MudFileUpload T="IBrowserFile"
+                               FilesChanged="UploadFile"
+                               MaximumFileCount="1"
+                               Accept=".db"
+                               Hidden="@false"
+                               InputClass="absolute mud-width-full mud-height-full overflow-hidden z-10"
+                               InputStyle="opacity:0"
+                               tabindex="-1"
+                               @ondrop="@ClearDragClass"
+                               @ondragenter="@SetDragClass"
+                               @ondragleave="@ClearDragClass"
+                               @ondragend="@ClearDragClass">
+
+                    <ActivatorContent>
+                        <MudPaper Outlined="true"
+                                  Class="@($"{_dragClass} centered-paper")">
+
+                            <button class="button-background-light normal-font">
+                                <img src="/Assets/downloadcloud.png" />
+                                @($"{(string.IsNullOrEmpty(fileName) ? "Wybierz plik .db" : fileName)}")
+                            </button>
+                        </MudPaper>
+                    </ActivatorContent>
+                </MudFileUpload>
+            </MudStack>
+
+            @if (!string.IsNullOrWhiteSpace(errorText))
+            {
+                <span class="error-text">@errorText</span>
+            }
+
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <button class="button-primary" @onclick="Import" disabled="@isLoading">
+            @if (isLoading)
+            {
+                <div class="progress-bar">
+                    <MudProgressCircular Indeterminate="true"
+                                         Size="Size.Small"
+                                         Color="Color.Secondary" />
+                </div>
+            }
+            else
+            {
+                <span>Rozpocznij</span>
+            }
+        </button>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; }
+
+    private const string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mud-width-full";
+    private string _dragClass = DefaultDragClass;
+
+    private string errorText = string.Empty;
+    private string fileName = string.Empty;
+
+    string tempPath => Path.Combine(Env.ContentRootPath, "temp_upload.db");
+    string dbPath => Path.Combine(Env.ContentRootPath, ConstData.DATA_BASE_FILE_NAME);
+
+    private bool isLoading = false;
+
+    private async Task Submit(bool result)
+    {
+        isLoading = true;
+        await Task.Delay(10);
+
+        MudDialog.Close(DialogResult.Ok(result));
+        isLoading = false;
+    }
+
+    private void Cancel()
+    {
+        if (!isLoading)
+        {
+            TryDeleteTempFile();
+            MudDialog.Cancel();
+        }
+    }
+
+    private async Task UploadFile(IBrowserFile file)
+    {
+        if (file == null)
+        {
+            fileName = string.Empty;
+
+            Snackbar.Add("Plik był pusty", Severity.Error);
+            return;
+        }
+
+        isLoading = true;
+
+        try
+        {
+            TryDeleteTempFile();
+            using var stream = file.OpenReadStream(maxAllowedSize: ConstData.NO_LIMIT_FILE_SIZE);
+            using var fileStream = File.Create(tempPath);
+            fileName = file.Name;
+            await stream.CopyToAsync(fileStream);
+        }
+        catch
+        {
+            TryDeleteTempFile();
+            Snackbar.Add("Nie udało się wgrać pliku", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task Import()
+    {
+        var parameters = new DialogParameters<DialogConfirm>
+        {
+            { x => x.ContentText, "Import bazy oznacza nadpisanie wszystkich obenych danych! Upewnij się że masz kopie zapasową." },
+        };
+
+        var dialog = await DialogService.ShowAsync<DialogConfirm>("Potwierdź import", parameters);
+        var result = await dialog.Result;
+
+        if (result!.Canceled)
+        {
+            TryDeleteTempFile();
+            return;
+        }
+
+        if (!File.Exists(tempPath))
+        {
+            Snackbar.Add("Błąd: nie znaleziono pliku do importu.", Severity.Error);
+            return;
+        }
+
+        try
+        {
+            isLoading = true;
+            var importResult = await DataBaseManager.ImportAsync(tempPath);
+            isLoading = false;
+            await Submit(importResult);
+        }
+        catch
+        {
+            Snackbar.Add("Błąd podczas próby importu", Severity.Error);
+        }
+        finally
+        {
+            TryDeleteTempFile();
+        }
+    }
+
+    private void TryDeleteTempFile()
+    {
+        try
+        {
+            if (File.Exists(tempPath))
+                File.Delete(tempPath);
+        }
+        catch
+        {
+            Snackbar.Add("Błąd czyszczenia pliku", Severity.Error);
+        }
+    }
+
+    private void SetDragClass()
+        => _dragClass = $"{DefaultDragClass} mud-border-primary";
+
+    private void ClearDragClass()
+        => _dragClass = DefaultDragClass;
+}

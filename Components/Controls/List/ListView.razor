@@ -1,0 +1,290 @@
+﻿@using DystenSoftwateManagment.Interfaces
+@using Microsoft.AspNetCore.Authorization
+@using DystenSoftwateManagment.Data
+@using DystenSoftwateManagment.Managers
+@using DystenSoftwateManagment.Utility
+@using DystenSoftwateManagment.Models
+@using DystenSoftwateManagment.Components.Controls
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using MudBlazor
+@typeparam TItem
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+
+@if (isLoading)
+{
+    <div class="loading-container">
+        <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Tertiary" />
+        <span>Ładowanie</span>
+    </div>
+}
+else
+{
+    @if (HeaderContent is not null)
+    {
+        <div class="header">
+            @HeaderContent
+            @if (isUpdating)
+            {
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Tertiary" />
+            }
+        </div>
+    } 
+    else if (Title is not null)
+    {
+
+        <div class="header"> @Title 
+            @if (isUpdating) {
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Tertiary" />
+            }
+        </div>
+    }
+
+    <div class="toolbar">
+        <InputIcon @bind-Value="searchText" Placeholder="Szukaj..." />
+        <MudSpacer />
+
+        <div class="actions">
+            @if (typeof(IHasIsActive).IsAssignableFrom(typeof(TItem)))
+            {
+                <ContextMenuButton CloseOnMenuClick="false" ContextMenuClass="context-menu">
+                    <Activator>
+                        <button class="button-icon-outlined">
+                            <img src="/Assets/filter.png" />
+                        </button>
+                    </Activator>
+                    <MenuContent>
+                        <button class="context-menu-item" @onclick="() => active = !active">
+                            <img src="/Assets/check.png"
+                                 style="@(active ? "visibility: visible;" : "visibility: hidden;")"
+                                 class="img-small" />
+                            Aktywne
+                        </button>
+                        <button class="context-menu-item" @onclick="() => notActive = !notActive">
+                            <img src="/Assets/check.png"
+                                 style="@(notActive ? "visibility: visible;" : "visibility: hidden;")"
+                                 class="img-small" />
+                            Nie aktywne
+                        </button>
+                    </MenuContent>
+                </ContextMenuButton>
+            }
+
+            @if (CardInnerContent is not null)
+            {
+                <button class="button-switch-view @(isGridView ? "selected" : "")" @onclick="() => SwitchView(true)">
+                    <img src="/Assets/grid.png" width="15" height="15" />
+                </button>
+                <button class="button-switch-view @(isGridView ? "" : "selected")" @onclick="() => SwitchView(false)">
+                    <img src="/Assets/list.png" width="15" height="15" />
+                </button>
+            }
+            @ActionsContent
+        </div>
+    </div>
+
+    @if (!isGridView || CardInnerContent is null)
+    {
+        <MudTable Items="Items" T="TItem"
+                  HorizontalScrollbar="true"
+                  Bordered="false" Outlined CellClass="table-cell"
+                  Filter="new Func<TItem, bool>(FilterFunc)"
+                  Class="table" Breakpoint="Breakpoint.Sm"
+                  Elevation="0">
+
+            <ColGroup>
+                <col style="width: 64px;" />
+                @TableColumns
+                <col style="width: 64px;" />
+            </ColGroup>
+
+            <HeaderContent>
+                <MudTh/>
+                @TableHeaders
+                <MudTh/>
+            </HeaderContent>
+
+            <RowTemplate Context="context">
+
+                <MudTd>
+                    <div class="table-icon">
+                        <img src="@IconSrc" width="15" height="15" />
+                    </div>
+                </MudTd>
+
+                @RowTemplate(context)
+
+                <MudTd>
+                    @if (ItemActionsMenu is not null)
+                    {
+                        <AuthorizeView Roles="Developer" Context="auth">
+                            <Authorized>
+                                <ContextMenuButton ContextMenuClass="context-menu">
+                                    <Activator>
+                                        <button class="button-icon">
+                                            <img src="/Assets/more.png" />
+                                        </button>
+                                    </Activator>
+                                    <MenuContent>
+                                        @ItemActionsMenu(context)
+                                    </MenuContent>
+                                </ContextMenuButton>
+                            </Authorized>
+                        </AuthorizeView>
+                    }
+                </MudTd>
+            </RowTemplate>
+
+            <NoRecordsContent>
+                <div class="no-records">
+                    <p>Brak elementów w tabeli</p>
+                    <p>Upewnij się że filtry są wyczyszczone</p>
+                </div>
+            </NoRecordsContent>
+        </MudTable>
+    }
+    else
+    {
+        <div class="card-grid">
+            @if (filteredItems.Count > 0)
+            {
+                @foreach (var item in filteredItems)
+                {
+                    <CardItem Title="@GetName(item)"
+                              TItem="TItem"
+                              DisplayCardContextMenu="@DisplayCardContextMenu"
+                              IconSrc="@IconSrc"
+                              OnCardClick="() => OnCardClick.InvokeAsync(item)">
+
+                        <InnerContent>
+                            @CardInnerContent?.Invoke(item)
+                        </InnerContent>
+
+                        <ContextMenuContent>
+                            @ItemActionsMenu?.Invoke(item)
+                        </ContextMenuContent>
+                    </CardItem>
+                }
+            }
+        </div>
+
+        @if (Items.Count() < 1)
+        {
+            <div class="empty-list">
+                <img src="/Assets/noidea.png" width="40" height="40" />
+                <div class="empty-list-text">
+                    <p>Brak elementów</p>
+                    <p>Dodaj aby zacząć</p>
+                </div>
+            </div>
+        }
+        else if (filteredItems.Count < 1)
+        {
+            <div class="empty-list">
+                <img src="/Assets/noidea.png" width="40" height="40" />
+                <div class="empty-list-text">
+                    <p>Brak elementów</p>
+                    <p>Nie znaleziono pasujących elementów</p>
+                </div>
+            </div>
+        }
+    }
+}
+
+@code {
+
+    [Parameter]
+    public RenderFragment<TItem>? CardInnerContent { get; set; }
+
+    [Parameter]
+    public bool DisplayCardContextMenu { get; set; } = true;
+
+    [Parameter]
+    public EventCallback<TItem> OnCardClick { get; set; }
+
+    [Parameter, EditorRequired]
+    public Func<Task<List<TItem>>> LoadItemsFunc { get; set; } = default!;
+
+    [Parameter]
+    public RenderFragment? ActionsContent { get; set; }
+
+    [Parameter, EditorRequired]
+    public RenderFragment TableColumns { get; set; }
+
+    [Parameter, EditorRequired]
+    public RenderFragment TableHeaders { get; set; }
+
+    [Parameter, EditorRequired]
+    public RenderFragment<TItem> RowTemplate { get; set; }
+
+    [Parameter]
+    public RenderFragment<TItem>? ItemActionsMenu { get; set; }
+
+    [Parameter]
+    public RenderFragment? HeaderContent { get; set; }
+
+    [Parameter]
+    public string? Title { get; set; }
+
+    [Parameter]
+    public string? IconSrc { get; set; }
+
+    [Parameter, EditorRequired]
+    public Func<TItem, string> GetName { get; set; } = default!;
+
+    private string searchText = string.Empty;
+    private bool isLoading = true;
+    private bool isUpdating = false;
+    private bool isGridView = true;
+    private bool active = true;
+    private bool notActive = false;
+
+    public List<TItem> Items { get; set; } = [];
+
+    private List<TItem> filteredItems => Items.Where(d => FilterFunc(d)).ToList();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            isGridView = await localStorage.GetItemAsync<bool>("isGridView");
+            await LoadAsync();
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private bool FilterFunc(TItem item)
+    {
+        bool matchesName = GetName(item).Contains(searchText, StringComparison.OrdinalIgnoreCase);
+
+        bool matchesActive = true;
+
+        if (item is IHasIsActive activeItem)
+        {
+            if (active != notActive)
+            {
+                matchesActive = activeItem.IsActive == active;
+            }
+        }
+
+        return matchesName && matchesActive;
+    }
+
+    public async Task LoadAsync()
+    {
+        isUpdating = true;
+        StateHasChanged();
+
+        Items = await LoadItemsFunc();
+
+        isUpdating = false;
+        StateHasChanged();
+    }
+
+    public void SwitchView(bool isGrid)
+    {
+        isGridView = isGrid;
+        localStorage.SetItemAsync("isGridView", isGridView);
+    }
+}

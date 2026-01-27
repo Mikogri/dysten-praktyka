@@ -1,0 +1,173 @@
+﻿@page "/projects"
+@attribute [Authorize]
+@using DystenSoftwateManagment.Components.Controls.List
+@using Microsoft.AspNetCore.Authorization
+@using DystenSoftwateManagment.Data
+@using DystenSoftwateManagment.Managers
+@using DystenSoftwateManagment.Utility
+@using DystenSoftwateManagment.Models
+@using DystenSoftwateManagment.Components.Controls
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using MudBlazor
+@rendermode InteractiveServer
+@inject NavigationManager Navigation
+@inject ProjectsManager ProjectsManager
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+
+<PageTitle>Projekty</PageTitle>
+
+<ListView @ref="listView" 
+          TItem="Project"
+          Title="Lista Projektów"
+          IconSrc="/Assets/project.png"
+          GetName="item => item.Name"
+          OnCardClick="GoDetails"
+          DisplayCardContextMenu="false"
+          LoadItemsFunc="ProjectsManager.GetAllAsync">
+
+    <TableColumns>
+        <col />
+        <col />
+    </TableColumns>
+
+    <TableHeaders>
+        <MudTh>Nazwa</MudTh>
+        <MudTh>Data utworzenia</MudTh>
+    </TableHeaders>
+
+    <RowTemplate Context="item">
+        <MudTd>
+            <a href="/projects/@item.Id">
+                @item.Name
+            </a>
+        </MudTd>
+        <MudTd>@item.CreationDate.ToString("yyyy-MM-dd")</MudTd>
+    </RowTemplate>
+
+    <ItemActionsMenu Context="item">
+        <button class="context-menu-item" @onclick="() => Edit(item)">
+            <img src="/Assets/edit.png" />
+            Edytuj komponent
+        </button>
+        <button class="context-menu-item" @onclick="() => EditNote(item)">
+            <img src="/Assets/note.png" />
+            Otwórz notatkę
+        </button>
+        <button class="context-menu-item" @onclick="() => Delete(item.Id)">
+            <img src="/Assets/delete.png" />
+            Usuń komponent
+        </button>
+    </ItemActionsMenu>
+
+    <ActionsContent>
+        <button class="button-add" @onclick="Create">
+            <img src="/Assets/plus.png" width="15" height="15" />
+            Nowy projekt
+        </button>
+    </ActionsContent>
+
+    <CardInnerContent Context="item">
+        Data utworzenia: @item.CreationDate.ToString("yyyy-MM-dd")
+    </CardInnerContent>
+
+</ListView>
+
+@code {
+
+    private ListView<Project>? listView;
+    // private List<Project> projects = new();
+    // private int totalProjects = 0;
+
+    // private string searchText = string.Empty;
+    // private bool isLoading = true;
+    // private bool isUpdating = false;
+    // private bool isGridView = true;
+
+    // private List<Project> filteredList => projects.Where(d => SearchFunc(d)).ToList();
+
+    // protected override async Task OnAfterRenderAsync(bool firstRender)
+    // {
+    //     if (firstRender)
+    //     {
+    //         isGridView = await localStorage.GetItemAsync<bool>("isGridView");
+    //         await Load();
+    //         isLoading = false;
+    //         StateHasChanged();
+    //     }
+    // }
+
+    // private bool SearchFunc(Project project)
+    // {
+    //     return project.Name.Contains(searchText, StringComparison.OrdinalIgnoreCase);
+    // }
+
+    // private async Task Load()
+    // {
+    //     isUpdating = true;
+    //     StateHasChanged();
+
+    //     totalProjects = await ProjectsManager.CountAllAsync();
+    //     projects = await ProjectsManager.GetAllAsync();
+
+    //     isUpdating = false;
+    //     StateHasChanged();
+    // }
+
+    public async Task Create()
+    {
+        var result = await ProjectsManager.AddAsync();
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            await listView!.LoadAsync();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    public async Task Edit(Project project)
+    {
+        var result = await ProjectsManager.EditAsync(project);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            await listView!.LoadAsync();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    public async Task EditNote(Project project)
+    {
+        var result = await ProjectsManager.EditNoteAsync(project);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    public async Task Delete(int id)
+    {
+        var result = await ProjectsManager.DeleteAsync(id);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            await listView!.LoadAsync();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    public void GoDetails(Project item)
+    {
+        Navigation.NavigateTo($"/projects/{item.Id}", true);
+    }
+
+    // public void SwitchView(bool isGrid)
+    // {
+    //     isGridView = isGrid;
+    //     localStorage.SetItemAsync("isGridView", isGridView);
+    // }
+}

@@ -1,0 +1,45 @@
+﻿<div class="context-menu-container">
+    <div @onclick="ToggleMenu">
+        @Activator
+    </div>
+
+    <MudPopover Open="@_open" Fixed="true"
+                OverflowBehavior="OverflowBehavior.FlipAlways"
+                DropShadow="false" Elevation="0"
+                AnchorOrigin="@AnchorOrigin"
+                TransformOrigin="@TransformOrigin">
+
+        <div class="menu @ContextMenuClass" @onclick="HandleMenuClick">
+            @MenuContent
+        </div>
+    </MudPopover>
+</div>
+
+@if (_open)
+{
+    <div class="menu-overlay" @onclick="CloseMenu"></div>
+}
+
+@code {
+
+    [Parameter] public RenderFragment? MenuContent { get; set; }
+    [Parameter] public RenderFragment? Activator { get; set; }
+    [Parameter] public bool CloseOnMenuClick { get; set; } = true;
+    [Parameter] public string ContextMenuClass { get; set; } = string.Empty;
+    [Parameter] public Origin AnchorOrigin { get; set; } = Origin.BottomLeft;
+    [Parameter] public Origin TransformOrigin { get; set; } = Origin.TopLeft;
+
+    private bool _open = false;
+
+    void ToggleMenu() => _open = !_open;
+
+    public void CloseMenu() => _open = false;
+
+    private void HandleMenuClick()
+    {
+        if (CloseOnMenuClick)
+        {
+            CloseMenu();
+        }
+    }
+}

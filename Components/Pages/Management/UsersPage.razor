@@ -1,0 +1,172 @@
+﻿@page "/manageusers"
+@attribute [Authorize(Roles = "Admin")]
+@using DystenSoftwateManagment.Components.Controls.Dialogs
+@using DystenSoftwateManagment.Components.Controls.List
+@using DystenSoftwateManagment.Managers
+@using DystenSoftwateManagment.Utility
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using DystenSoftwateManagment.Data
+@using DystenSoftwateManagment.Models
+@using DystenSoftwateManagment.Components.Controls
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using MudBlazor
+@rendermode InteractiveServer
+@inject AuthenticationStateProvider AuthStateProvider
+@inject UsersManager UsersManager
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject Blazored.LocalStorage.ILocalStorageService localStorage
+
+<PageTitle>Użytkownicy</PageTitle>
+
+<ListView @ref="listView"
+          TItem="IdentityUser"
+          LoadItemsFunc="Load"
+          Title="Lista Użytkowników"
+          IconSrc="/Assets/user.png"
+          GetName="user => user.UserName">
+
+    <TableColumns>
+        <col />
+        <col />
+        <col />
+    </TableColumns>
+
+    <TableHeaders>
+        <MudTh>Login</MudTh>
+        <MudTh>Rola</MudTh>
+        <MudTh>User Id</MudTh>
+    </TableHeaders>
+
+    <RowTemplate Context="item">
+        <MudTd>@item.UserName</MudTd>
+        <MudTd>
+            @{
+                var hasRole = userRoles.TryGetValue(item.Id, out var role) && !string.IsNullOrWhiteSpace(role);
+                var roles = hasRole ? role.Split(',') : new[] { "--" };
+            }
+
+            @roles.FirstOrDefault()
+        </MudTd>
+
+        <MudTd>@item.Id</MudTd>
+    </RowTemplate>
+
+    <ItemActionsMenu Context="item">
+        @if (item.UserName != "root")
+        {
+            <button class="context-menu-item" @onclick="() => Edit(item)">
+                <img src="/Assets/edit.png" />
+                Edytuj konto
+            </button>
+        }
+
+        <button class="context-menu-item" @onclick="() => EditPassword(item)">
+            <img src="/Assets/note.png" />
+            Edytuj hasło
+        </button>
+
+        @if (item.UserName != "root")
+        {
+            <button class="context-menu-item" @onclick="() => Delete(item)">
+                <img src="/Assets/delete.png" />
+                Usuń konto
+            </button>
+        }
+    </ItemActionsMenu>
+
+    <CardInnerContent Context="item">
+        <div class="card-item-inner-text">
+            <span>Role:</span>
+            <div class="role-list">
+                @{
+                    var hasRole = userRoles.TryGetValue(item.Id, out var role) && !string.IsNullOrWhiteSpace(role);
+                    var roles = hasRole ? role.Split(',') : new[] { "--" };
+                }
+                @foreach (var r in roles)
+                {
+                    <div class="role-item">
+                        <span class="role-dot @r.ToLower()"></span>
+                        <span class="role-name">@r</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </CardInnerContent>
+
+    <ActionsContent>
+        <button class="button-add" @onclick="Create">
+            <img src="/Assets/plus.png" width="15" height="15" />
+            Nowe konto
+        </button>
+    </ActionsContent>
+
+</ListView>
+
+@code {
+
+    private ListView<IdentityUser>? listView;
+
+    private List<IdentityUser> users = new();
+
+    private Dictionary<string, string> userRoles = new();
+
+    private async Task<List<IdentityUser>> Load()
+    {
+        users = await UsersManager.GetAllAsync();
+
+        foreach (var user in users)
+        {
+            var roles = await UsersManager.GetUserRolesAsync(user);
+            userRoles[user.Id] = string.Join(", ", roles);
+        }
+
+        return users;
+    }
+
+    private async Task Create()
+    {
+        var result = await UsersManager.CreateAsync();
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            await listView!.LoadAsync();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    private async Task Edit(IdentityUser user)
+    {
+        var result = await UsersManager.EditAsync(user);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            await listView!.LoadAsync();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    private async Task Delete(IdentityUser user)
+    {
+        var result = await UsersManager.DeleteAsync(user);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            await listView!.LoadAsync();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+
+    public async Task EditPassword(IdentityUser user)
+    {
+        var result = await UsersManager.EditPasswordAsync(user);
+
+        if (result.OperationStatus != OperationResult.Canceled)
+        {
+            await Load();
+            Snackbar.Add(result.Message, Utilities.ToSeverity(result.OperationStatus));
+        }
+    }
+}
