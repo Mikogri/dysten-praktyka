@@ -1,4 +1,4 @@
-﻿using Blazored.LocalStorage;
+using Blazored.LocalStorage;
 using DystenSoftwateManagment.Components;
 using DystenSoftwateManagment.Data;
 using DystenSoftwateManagment.Managers;
@@ -30,12 +30,12 @@ builder.Services.AddScoped(provider =>
 
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 {
-	options.Password.RequireDigit = false;
-	options.Password.RequireLowercase = false;
-	options.Password.RequireNonAlphanumeric = false;
-	options.Password.RequireUppercase = false;
-	options.Password.RequiredLength = 0;
-	options.Password.RequiredUniqueChars = 0;
+	options.Password.RequireDigit = true;
+	options.Password.RequireLowercase = true;
+	options.Password.RequireNonAlphanumeric = true;
+	options.Password.RequireUppercase = true;
+	options.Password.RequiredLength = 12;
+	options.Password.RequiredUniqueChars = 4;
 })
 	.AddEntityFrameworkStores<AppDbContext>()
 	.AddDefaultTokenProviders();
@@ -91,6 +91,11 @@ if (!app.Environment.IsDevelopment())
 {
 	app.UseExceptionHandler("/Error", createScopeForErrors: true);
 	app.UseHsts();
+
+}
+
+if (app.Environment.IsDevelopment())
+{
 	app.UseMigrationsEndPoint();
 }
 
@@ -190,6 +195,59 @@ app.MapGet("/export-db", (IWebHostEnvironment env) =>
 	return Results.Stream(stream, "application/zip", "exported-db.zip");
 }).RequireAuthorization("CanExportDatabase");
 
+app.UseAntiforgery();
+
+app.MapStaticAssets();
+app.MapRazorComponents<App>()
+	.AddInteractiveServerRenderMode();
+
+using (var scope = app.Services.CreateScope())
+{
+	var rootSection = app.Configuration.GetSection("RootUser");
+	var enabled = rootSection.GetValue<bool>("Enabled");
+	var userName = rootSection["UserName"];
+	var password = rootSection["Password"];
+
+	if (enabled && (string.IsNullOrWhiteSpace(userName) || string.IsNullOrWhiteSpace(password)))
+	{
+		throw new InvalidOperationException(
+			"Administrator initialization requires RootUser:UserName and RootUser:Password. Configure secrets or set RootUser:Enabled to false.");
+	}
+
+	var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+	string[] roles = ["Admin", "Developer", "User"];
+
+	foreach (var role in roles)
+	{
+		if (!await roleManager.RoleExistsAsync(role))
+		{
+			EnsureIdentitySuccess(await roleManager.CreateAsync(new IdentityRole(role)), "Role initialization");
+		}
+	}
+
+	if (enabled)
+	{
+		var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
+		var rootUser = await userManager.FindByNameAsync(userName!);
+
+		if (rootUser == null)
+		{
+			var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+			await using var transaction = await db.Database.BeginTransactionAsync();
+			rootUser = new IdentityUser { UserName = userName };
+			EnsureIdentitySuccess(await userManager.CreateAsync(rootUser, password!), "Administrator creation");
+			EnsureIdentitySuccess(await userManager.AddToRolesAsync(rootUser, ["Admin", "Developer"]), "Administrator role assignment");
+			await transaction.CommitAsync();
+		}
+		else if (!await userManager.IsInRoleAsync(rootUser, "Admin") ||
+			!await userManager.IsInRoleAsync(rootUser, "Developer"))
+		{
+			throw new InvalidOperationException(
+				"Administrator initialization found an existing account without the required roles. Review the account manually; no credentials or roles were changed.");
+		}
+	}
+}
+
 var dbManager = new DataBaseManager();
 
 var cts = new CancellationTokenSource();
@@ -200,49 +258,13 @@ app.Lifetime.ApplicationStopping.Register(() =>
 	cts.Cancel();
 });
 
-app.UseAntiforgery();
+app.Run();
 
-app.MapStaticAssets();
-app.MapRazorComponents<App>()
-	.AddInteractiveServerRenderMode();
-
-using (var scope = app.Services.CreateScope())
+static void EnsureIdentitySuccess(IdentityResult result, string operation)
 {
-	var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
-	var rootSection = config.GetSection("RootUser");
-
-	var userName = rootSection["UserName"];
-	var password = rootSection["Password"];
-
-	if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrWhiteSpace(password))
+	if (!result.Succeeded)
 	{
-		throw new Exception("RootUser UserName or Password is missing in configuration");
-	}
-
-	var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-	string[] roles = ["Admin", "Developer", "User"];
-
-	foreach (var role in roles)
-	{
-		if (!await roleManager.RoleExistsAsync(role))
-		{
-			await roleManager.CreateAsync(new IdentityRole(role));
-		}
-	}
-
-	var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
-	var rootUser = await userManager.FindByNameAsync(userName!);
-
-	if (rootUser == null)
-	{
-		rootUser = new IdentityUser { UserName = userName };
-		var result = await userManager.CreateAsync(rootUser, password!);
-
-		if (result.Succeeded)
-		{
-			await userManager.AddToRolesAsync(rootUser, ["Admin", "Developer"]);
-		}
+		// Descriptions may contain user input. Only report standard Identity error codes.
+		throw new InvalidOperationException($"{operation} failed: {string.Join(", ", result.Errors.Select(error => error.Code))}");
 	}
 }
-
-app.Run();

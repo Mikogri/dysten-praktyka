@@ -1,7 +1,4 @@
 {
-  "ConnectionStrings": {
-    "DefaultConnection": "Data Source=devicesDataBase.db;BusyTimeout=5000"
-  },
   "profiles": {
     "http": {
       "commandName": "Project",
